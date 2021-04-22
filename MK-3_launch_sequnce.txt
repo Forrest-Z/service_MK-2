@@ -1,0 +1,40 @@
+
+Terminal1 Launch Start (main)
+-------------------------------------------------------------------------------------
+roscore
+
+roslaunch zetabank_bringup zetabank_robot.launch
+
+
+rosrun zetabot_main module_controller.py
+
+
+roslaunch depthimage_to_laserscan multi_laser.launch
+
+roslaunch ira_laser_tools laserscan_multi_merger.launch 
+
+roslaunch zetabank_navigation normal_navigation.launch
+
+rviz
+
+
+
+Terminal2 Launch Start (Jetson realsense)
+-------------------------------------------------------------------------------------
+ssh zetabank-jetson@192.168.113.21 -p 22
+password: zetabank
+
+roslaunch realsense2_camera rs_camera.launch
+
+
+
+Terminal3 Launch Start (auto_run & darknet)
+-------------------------------------------------------------------------------------
+python client_socket.py
+
+python darknet_depthCenter_rgb_stream.py
+
+
+manual controll
+-------------------------------------------------------------------------------------
+python teleop_key_module_sevice_ver2.py

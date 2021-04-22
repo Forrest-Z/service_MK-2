@@ -1,0 +1,148 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import rospy
+import json
+import os
+import time
+from zetabot_main.srv import Dbsrv
+from full_coverage.srv import Cell2pose
+from std_msgs.msg import String
+from zetabot_main.srv import ModuleControllerSrv
+
+
+cell_name = ""
+today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
+
+module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
+
+
+
+def cell_name_recv(msg) :
+    global cell_name
+    cell_name = msg.data
+
+def make_air_class_file(air_info_dict) :
+    global today
+    
+    air_class_dict_list = []
+    air_class_file_path = "/home/zetabank/catkin_ws/src/full_coverage/scripts/map/air_class_"+today+".json"
+
+    # air_info_average = (int(air_info_dict["Fine_dust"]) + int(air_info_dict["Ultrafine_dust"]) + int(air_info_dict["Organic_compounds"]))/3
+    # air_class = "a" if air_info_average <= 1 else("b" if 1 < air_info_average <= 3 else "c")
+
+    if int(air_info_dict["Fine_dust"]) > 50 or int(air_info_dict["Ultrafine_dust"]) > 30 :
+        air_class = "c"
+        module_controller_srv("led_red")
+        print(air_info_dict["Fine_dust"],air_info_dict["Ultrafine_dust"])
+    elif int(air_info_dict["Fine_dust"]) < 20 or int(air_info_dict["Ultrafine_dust"]) < 13 :
+        air_class = "a"
+        module_controller_srv("led_green")
+    else :
+        air_class = "b"
+        module_controller_srv("led_oragne")
+
+    air_class_dict = {
+        "cell_name" : cell_name,
+        "class" : air_class
+    }
+
+    try :
+        with open(air_class_file_path, 'r') as air_class_file:
+            air_class_dict_list = json.load(air_class_file)
+    except :
+        pass
+
+    for i in air_class_dict_list :
+        if i['cell_name'] == air_class_dict['cell_name'] :
+            i['class'] = air_class_dict['class']
+            air_class_dict = dict()
+            break
+    
+    if air_class_dict :
+        air_class_dict_list.append(air_class_dict)
+        
+    with open(air_class_file_path, 'w') as air_class_file:
+        json.dump(air_class_dict_list, air_class_file, indent=4)
+        print("write air class")
+
+def make_air_info_file(air_info_dict) :
+    global today
+
+    air_info_file_path = "/home/zetabank/catkin_ws/src/full_coverage/scripts/map/air_info_"+today+".json"
+    air_info_dict_list = []
+
+    try :
+        with open(air_info_file_path, 'r') as air_info_file:
+            air_info_dict_list = json.load(air_info_file)
+    except :
+        pass
+
+    air_info_dict_list.append(air_info_dict)
+        
+    with open(air_info_file_path, 'w') as air_info_file:
+        json.dump(air_info_dict_list, air_info_file, indent=4)
+        print("write air info")
+
+def air_info_recv(msg) :
+    global cell_name
+
+    air_info_dict = dict()
+    
+    air_info = msg.data
+
+    air_list = air_info.split("|")
+
+    # air_info_dict = {
+    #     "sensor" : 
+    #         [{"cell_name" : cell_name,
+    #         "Fine_dust" : air_list[0],
+    #         "Ultrafine_dust" : air_list[1],
+    #         # "time" : str(time.localtime(time.time()).tm_hour) +"h, " + str(time.localtime(time.time()).tm_min) +"m, " + str(time.localtime(time.time()).tm_sec)+"s",
+    #         "CO2" : air_list[2],
+    #         "Formaldehyde" : air_list[3],
+    #         "CO" : air_list[4],
+    #         "NO2" : air_list[5],
+    #         "Radon" : air_list[6],
+    #         "Organic_compounds" : air_list[7],
+    #         "Temperature" : air_list[8],
+    #         "Humidity" : air_list[9]}]
+    # }
+    air_info_dict = {
+        "sensor" : 
+            [{"cell_name" : cell_name,
+            "Fine_dust" : air_list[0],
+            "Ultrafine_dust" : air_list[1]}]
+    }
+
+
+
+    if not air_info_dict["sensor"][0]["cell_name"] == "empty" :
+        make_air_class_file(air_info_dict["sensor"][0])
+        make_air_info_file(air_info_dict["sensor"][0])
+        dbsrv = rospy.ServiceProxy('db_works', Dbsrv)
+        resp1 = dbsrv("air_info_insert",str(air_info_dict))
+        print("send_server")
+
+
+def main():
+    rospy.init_node("air_info_handling")
+
+    # cli = rospy.ServiceProxy("cell2pose",Cell2pose)
+    # cell_condition = cli("A1")
+
+    cell_name_topic = "/cell_name"
+    rospy.Subscriber(cell_name_topic,String,cell_name_recv)
+
+    # air = "0|1|2|3|4|5|6|7|8|9"
+
+    air_info_topic = "/air"
+    rospy.Subscriber(air_info_topic,String,air_info_recv)
+
+
+    # print(cell_condition)
+
+    rospy.spin()
+
+if __name__ == "__main__":
+    main()

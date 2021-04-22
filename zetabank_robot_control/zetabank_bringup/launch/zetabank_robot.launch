@@ -1,0 +1,50 @@
+<launch>
+  
+  <!-- <include file="$(find zetabank_bringup)/launch/zetabank_lidar_sick561.launch"/> -->
+
+  <!-- <include file="$(find depthimage_to_laserscan)/launch/multi_laser.launch" /> -->
+
+
+  <!-- <include file="$(find ira_laser_tools)/launch/laserscan_multi_merger.launch" /> -->
+
+
+
+  <!-- <include file="$(find zetabank_bringup)/launch/zetabank_remote.launch" /> -->
+
+  <!-- <node pkg="zetabank_bringup" type="zetabank_diagnostics" name="zetabank_diagnostics" output="screen" />  -->
+  
+  <!-- <include file="$(find diffwheel_robot_control)/launch/zetabank_diffwheel_robot_control.launch"/> -->
+
+  <!-- <include file="$(find mdrobot_motor_control_test)/launch/mdmc_demo.launch" /> -->
+<!-- 
+  <node pkg="rosserial_python" type="serial_node.py" name="IMU_sensor" output="screen">
+    <param name="port" value="/dev/stlinkv2-1_1"/>
+    <param name="baud" value="460800"/>
+  </node> -->
+
+<!--
+  <node pkg="rosserial_python" type="serial_node.py" name="module_control_board">
+    <param name="port" value="/dev/ttyACM-ENV"/>
+    <param name="baud" value="115200"/>
+  </node> 
+-->
+<!-- 
+  <node pkg="rosserial_python" type="serial_node.py" name="POWER">
+    <param name="port" value="/dev/ttyUSB-PWR"/>
+    <param name="baud" value="115200"/>
+  </node> 
+ -->
+
+<node pkg="rosserial_python" type="serial_node.py" name="AIR_sensor">
+    <param name="port" value="/dev/ttyACM2"/>
+    <param name="baud" value="115200"/>
+  </node> 
+  
+
+
+  <!-- <node pkg="rosserial_python" type="serial_node.py" name="SONAR_sensor" output="screen">
+    <param name="port" value="/dev/ttyACM-MODULE"/>
+    <param name="baud" value="115200"/>
+    </node> -->	 
+    <!-- <include file="$(find sick_tim)/launch/sick_tim551_2050001.launch" />  -->
+</launch>
