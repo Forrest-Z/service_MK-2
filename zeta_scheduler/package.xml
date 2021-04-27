@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>schduler</name>
+  <name>zeta_scheduler</name>
   <version>0.0.0</version>
   <description>The my_first_ros_pkg package</description>
 

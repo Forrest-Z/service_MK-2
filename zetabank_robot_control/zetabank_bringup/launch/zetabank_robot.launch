@@ -18,13 +18,13 @@
   <include file="$(find zeta_mdrobot_motor_control)/launch/mdmc.launch" />
 
   <node pkg="rosserial_python" type="serial_node.py" name="STM" output="screen">
-    <param name="port" value="/dev/stlinkv2-1_1"/>
+    <param name="port" value="/dev/stlinkv2-1_2"/>
     <param name="baud" value="460800"/>
   </node>
 
 
   <node pkg="rosserial_python" type="serial_node.py" name="ENV">
-    <param name="port" value="/dev/ttyACM-ENV"/>
+    <param name="port" value="/dev/ttyACM-AIR"/>
     <param name="baud" value="115200"/>
   </node> 
 
