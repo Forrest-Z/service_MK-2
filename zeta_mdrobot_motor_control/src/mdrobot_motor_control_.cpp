@@ -1,4 +1,6 @@
-#include "mdrobot_motor_control_test/mdrobot_motor_control.hpp"
+#include "zeta_mdrobot_motor_control/mdrobot_motor_control.hpp"
+
+#define DEBUG_BASIC
 
 mdrobot_motor_control::mdrobot_motor_control()
 {
@@ -45,16 +47,37 @@ void mdrobot_motor_control::RecvDatafromMC(void)
 	while(b_SerialThreadRun)
 	{
 		if(b_serialOpenOK) {
-			rnum = mc_serial.available();
+			try
+			{
+				rnum = mc_serial.available();
+			}
+			catch (serial::IOException& e)
+			{
+				ROS_ERROR_STREAM(" available Serial IO Exception :" << e.what());
+			}
 			
 			if(rnum > 0)
 			{
 				SetZeroMem(rbuff, 100);
-				
-				mc_serial.read(rbuff, rnum);
 
-				ret = RecvDatatoBuff(rbuff, rnum);
-				
+				try
+				{					
+					mc_serial.read(rbuff, rnum);
+
+					ret = RecvDatatoBuff(rbuff, rnum);
+				}
+				catch (serial::IOException& e)
+    			{
+					ROS_ERROR_STREAM(" Serial IO Exception :" << e.what());
+					SerialErrCnt++;
+
+					if(SerialErrCnt > 10)
+					{
+						SerialErrCnt = 0;
+						b_serialOpenOK = false;
+					}
+				}											
+								
 			}
 		}
 
@@ -68,19 +91,32 @@ void mdrobot_motor_control::RecvDatafromMC(void)
 			{
 				srcnt = 0;
 
-#ifdef _DEBUG_BASIC				
-				if(isMDMCRun() != ON)
+				if(b_serialOpenOK == false)
 				{
-					ROS_INFO_STREAM("ERROR : disconneted MD MC!!!");
+					ROS_ERROR_STREAM("Try to reconnect to serial comm.");
+
+					ReconnectSerial();
+					
+				}
+				else if(isMDMCRun() != ON)
+				{
+					ROS_ERROR_STREAM("ERROR : disconneted MD MC!!!");
 				} else {
 					ROS_INFO_STREAM("Connecting MD MC....");
 				}
-#endif				
 			}
+
+			
 		}
 
 		rec_dealy.sleep();
 	}
+}
+
+void mdrobot_motor_control::ReconnectSerial(void)
+{
+	InitSerial();
+
 }
 
 RetByte mdrobot_motor_control::ShorttoByte(short sVal)
@@ -110,7 +146,7 @@ int mdrobot_motor_control::InitSerial(void)
 
     try
     {
-        mc_serial.setPort("/dev/ttyUSB-MC");
+        mc_serial.setPort("/dev/ttyUSB0");
         mc_serial.setBaudrate(nBaudrate);
 		// 556 when baud is 19200, 1.8ms
 		//1667 when baud is 57600, 0.6ms
@@ -127,11 +163,14 @@ int mdrobot_motor_control::InitSerial(void)
     }
     if(mc_serial.isOpen())
 	{
+		SerialErrCnt = 0;
+
 		b_serialOpenOK = true;
 		
         ROS_INFO_STREAM("MD BLDC Motor Controller Serial Port initialized");
 
-		recvThread_Run();
+		if(b_SerialThreadRun == false)
+			recvThread_Run();
 
 		ROS_INFO_STREAM("Run serial receive thread...");
 
@@ -203,16 +242,39 @@ int mdrobot_motor_control::SetVelocity(short lVel, short rVel)
 #ifdef _DEBUG_BASIC
 	ROS_INFO_STREAM("send vel : ("  << lVel << "," << rVel << ") ");
 
-	for(i = 0; i < 12; i++)
+	for(i = 0; i < 13; i++)
 		ROS_INFO(" %d", sendBuf[i]);
 	ROS_INFO("\n");
 	//ROS_INFO_STREAM(" [%d %d]  [%d %d]"  << sendBuf[6] << " " << sendBuf[7] << " " << sendBuf[9] << " " << sendBuf[10]);
 #endif	
 
-	ROS_INFO_STREAM("send vel : ("  << lVel << "," << rVel << ") ");
+	try
+	{
+		if(b_serialOpenOK)
+			mc_serial.write(sendBuf, byPidDataSize);	
+	}
+	catch (serial::IOException& e)
+    {
+		ROS_ERROR_STREAM(" Serial Write Error :" << e.what());
+		SerialErrCnt++;
 
-	mc_serial.write(sendBuf, byPidDataSize);
-	memset(sendBuf,0,MAX_PACKET_SIZE);
+		if(SerialErrCnt > 10)
+		{
+			SerialErrCnt = 0;
+			b_serialOpenOK = false;
+		}
+	}
+	catch(serial::SerialException se)	
+	{
+		ROS_ERROR_STREAM(" SetVelocity Serial Exception :" << se.what());
+		SerialErrCnt++;
+
+		if(SerialErrCnt > 10)
+		{
+			SerialErrCnt = 0;
+			b_serialOpenOK = false;
+		}
+	}
 }
 
 void mdrobot_motor_control::SetZeroMem(BYTE buff[], BYTE num)
@@ -230,7 +292,7 @@ BYTE mdrobot_motor_control::RecvDatatoBuff(BYTE buff[], BYTE num)
 	if(num > 0)
 	{
 
-#ifdef DEBUG_BASIC 
+#ifdef _DEBUG_BASIC 
 		ROS_INFO("[1]receive num: %d", num);
 
 		//ss << "num:"  << num << " recvNum:" << recvNumber;
@@ -408,8 +470,38 @@ void mdrobot_motor_control::SendReqPIDData(BYTE PID)
         
 	sendBuf[6] = ~(byTempDataSum) + 1; //check sum
 
-	mc_serial.write(sendBuf, 7);
-	memset(sendBuf,0,MAX_PACKET_SIZE);
+	try
+	{
+		if(b_serialOpenOK)
+		{
+			int size = mc_serial.write(sendBuf, 7);
+
+			//ROS_INFO("write data of SendReqPIDData :%d", size);	
+		}
+	}
+	catch (serial::IOException& e)
+    {
+		ROS_ERROR_STREAM(" Serial Write Error :" << e.what());
+		SerialErrCnt++;
+
+		if(SerialErrCnt > 10)
+		{
+			SerialErrCnt = 0;
+			b_serialOpenOK = false;
+		}
+	}
+	catch(serial::SerialException se)	
+	{
+		ROS_ERROR_STREAM(" SendReqPIDData Serial Exception :" << se.what());
+		SerialErrCnt++;
+
+		if(SerialErrCnt > 10)
+		{
+			SerialErrCnt = 0;
+			b_serialOpenOK = false;
+		}
+	}
+	
 }
 
 void mdrobot_motor_control::PNTMainDataBC(BYTE type)
@@ -435,8 +527,22 @@ void mdrobot_motor_control::PNTMainDataBC(BYTE type)
         
 	sendBuf[6] = ~(byTempDataSum) + 1; //check sum
 
-	mc_serial.write(sendBuf, 7);
-	memset(sendBuf,0,MAX_PACKET_SIZE);
+	try
+	{
+		if(b_serialOpenOK)
+			mc_serial.write(sendBuf, 7);	
+	}
+	catch (serial::IOException& e)
+    {
+		ROS_ERROR_STREAM(" Serial Write Error :" << e.what());
+		SerialErrCnt++;
+
+		if(SerialErrCnt > 10)
+		{
+			SerialErrCnt = 0;
+			b_serialOpenOK = false;
+		}
+	}	
 
 #ifdef _DEBUG_BASIC  
 	ROS_INFO("PID_MainDataBC Send Data ==> ");
@@ -476,8 +582,23 @@ void mdrobot_motor_control::TorqueOff(BYTE type)
         
 	sendBuf[8] = ~(byTempDataSum) + 1; //check sum
 
-	mc_serial.write(sendBuf, 9);
-	memset(sendBuf,0,MAX_PACKET_SIZE);
+	try
+	{
+		if(b_serialOpenOK)
+			mc_serial.write(sendBuf, 9);	
+	}
+	catch (serial::IOException& e)
+    {
+		ROS_ERROR_STREAM(" Serial Write Error :" << e.what());
+		SerialErrCnt++;
+
+		if(SerialErrCnt > 10)
+		{
+			SerialErrCnt = 0;
+			b_serialOpenOK = false;
+		}
+	}
+	
 }
 
 void mdrobot_motor_control::BreakOff(BYTE type)
@@ -511,8 +632,23 @@ void mdrobot_motor_control::BreakOff(BYTE type)
         
 	sendBuf[8] = ~(byTempDataSum) + 1; //check sum
 
-	mc_serial.write(sendBuf, 9);
-	memset(sendBuf,0,MAX_PACKET_SIZE);
+	try
+	{
+		if(b_serialOpenOK)
+			mc_serial.write(sendBuf, 9);	
+	}
+	catch (serial::IOException& e)
+    {
+		ROS_ERROR_STREAM(" Serial Write Error :" << e.what());
+		SerialErrCnt++;
+
+		if(SerialErrCnt > 10)
+		{
+			SerialErrCnt = 0;
+			b_serialOpenOK = false;
+		}
+	}
+	
 }
 
 void mdrobot_motor_control::ResetAlarm(void)
@@ -535,8 +671,23 @@ void mdrobot_motor_control::ResetAlarm(void)
         
 	sendBuf[6] = ~(byTempDataSum) + 1; //check sum
 
-	mc_serial.write(sendBuf, 7);
-	memset(sendBuf,0,MAX_PACKET_SIZE);
+	try
+	{
+		if(b_serialOpenOK)
+			mc_serial.write(sendBuf, 7);	
+	}
+	catch (serial::IOException& e)
+    {
+		ROS_ERROR_STREAM(" Serial Write Error :" << e.what());
+		SerialErrCnt++;
+
+		if(SerialErrCnt > 10)
+		{
+			SerialErrCnt = 0;
+			b_serialOpenOK = false;
+		}
+	}
+	
 }
 
 void mdrobot_motor_control::ResetPosition(void)
@@ -561,8 +712,23 @@ void mdrobot_motor_control::ResetPosition(void)
         
 	sendBuf[6] = ~(byTempDataSum) + 1; //check sum
 
-	mc_serial.write(sendBuf, 7);
-	memset(sendBuf,0,MAX_PACKET_SIZE);
+	try
+	{
+		if(b_serialOpenOK)
+			mc_serial.write(sendBuf, 7);	
+	}
+	catch (serial::IOException& e)
+    {
+		ROS_ERROR_STREAM(" Serial Write Error :" << e.what());
+		SerialErrCnt++;
+
+		if(SerialErrCnt > 10)
+		{
+			SerialErrCnt = 0;
+			b_serialOpenOK = false;
+		}
+	}
+	
 }
 
 void mdrobot_motor_control::checkMDMCRunning(void)
@@ -585,9 +751,23 @@ void mdrobot_motor_control::checkMDMCRunning(void)
         
 	sendBuf[6] = ~(byTempDataSum) + 1; //check sum
 
-	mc_serial.write(sendBuf, 7);
-	memset(sendBuf,0,MAX_PACKET_SIZE);
+	try
+	{
+		if(b_serialOpenOK)
+			mc_serial.write(sendBuf, 7);	
+	}
+	catch (serial::IOException& e)
+    {
+		ROS_ERROR_STREAM(" Serial Write Error :" << e.what());
+		SerialErrCnt++;
 
+		if(SerialErrCnt > 10)
+		{
+			SerialErrCnt = 0;
+			b_serialOpenOK = false;
+		}
+	}
+	
 #ifdef _DEBUG_BASIC  
 	ROS_INFO("checkMDMCRunning Send Data ==> ");
 	for(int i = 0; i < 7; i++)
@@ -633,7 +813,7 @@ int mdrobot_motor_control::ParseReceiveData(void)
 
 			break;
 
-		case PID_PNT_MONITOR:                                                              
+		case PID_PNT_MONITOR:
 			byStatus[MOTOR_LEFT]   = recvBuffer[5];
             fgAlarm[MOTOR_LEFT]    = recvBuffer[5] & BIT0;
             fgCtrlFail[MOTOR_LEFT] = recvBuffer[5] & BIT1;
@@ -655,10 +835,7 @@ int mdrobot_motor_control::ParseReceiveData(void)
             fgInvVel[MOTOR_RIGHT]   = recvBuffer[8] & BIT6;
             fgStall[MOTOR_RIGHT]    = recvBuffer[8] & BIT7;
 			sMotorRPM[MOTOR_RIGHT]  = BytetoShort(recvBuffer[9], recvBuffer[10]);
-            ROS_INFO("Receive Data ==> ");
-			for(int i = 0; i < 12; i++)
-				ROS_INFO("(%d) : %d ", i, recvBuffer[i]);
-			ROS_INFO("recvData => %ld  %ld", (long)sMotorRPM[MOTOR_LEFT], (long)sMotorRPM[MOTOR_RIGHT]);
+
 #ifdef _DEBUG_BASIC
 			ROS_INFO("Receive Data ==> ");
 			for(int i = 0; i < 12; i++)
@@ -701,10 +878,6 @@ int mdrobot_motor_control::ParseReceiveData(void)
                     recvBuffer[21], recvBuffer[22]);
 
 			b_recvOK = true;
-
-			// ROS_INFO("recvData => %d  %d", sCurrent[MOTOR_LEFT], sCurrent[MOTOR_RIGHT]);
-            ROS_INFO("[ %d, %ld, %ld, %d, %ld, %ld ]", byStatus[MOTOR_LEFT], (long)sMotorRPM[MOTOR_LEFT], MotorPosition[MOTOR_LEFT],
-                     byStatus[MOTOR_RIGHT], (long)sMotorRPM[MOTOR_RIGHT], MotorPosition[MOTOR_RIGHT]);
 
 #ifdef _DEBUG_BASIC
             ROS_INFO("recvData => %d  %d", sCurrent[MOTOR_LEFT], sCurrent[MOTOR_RIGHT]);

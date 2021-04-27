@@ -1,24 +1,29 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 import rospy
 
 import os
 
+import threading
+
+
 import actionlib
-from apscheduler.jobstores.base import JobLookupError
-from apscheduler.schedulers.background import BackgroundScheduler
+# from apscheduler.jobstores.base import JobLookupError
+# from apscheduler.schedulers.background import BackgroundScheduler
 import time
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, UInt16
 from std_msgs.msg import String
 from zetabot_main.msg import MoveMsgs
 from zetabot_main.msg import ScheduleAirAction, ScheduleAirGoal
 from zetabot_main.msg import ScheduleFullcoverageAction, ScheduleFullcoverageGoal
-# from autocharge.msg import ChargingAction, ChargingActionGoal, ChargingGoal
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
+from actionlib_msgs.msg import GoalStatusArray
 from zetabot_main.srv import ModuleControllerSrv, TurnSrv
 from std_srvs.srv import Empty
-import my_first_ros_pkg.msg
+import scheduler.msg
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from socket import *
+
+print("import")
 
 
 cur_mode = 'rest'
@@ -34,18 +39,41 @@ charging_cancel_pub = rospy.Publisher('charging_cancel', Bool, queue_size=10)
 move_vel_pub = rospy.Publisher('/move_vel',MoveMsgs,queue_size=10)
 robot_mode_pub = rospy.Publisher('/robot_mode',String,queue_size=10)
 power_ctl_pub =  rospy.Publisher('power_ctl', String, queue_size=10)
+emergency_stop_pub = rospy.Publisher('/move_base_stop',Bool,queue_size=10)
+
+print("pub_set")
+
 
 turn_srv = rospy.ServiceProxy('turn', TurnSrv)
-
-
-
 module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
 
+print("srv_set")
+
+
 serverSock = socket(AF_INET, SOCK_STREAM)
+
+print("sock_bind_befor")
+
+
 serverSock.bind(('192.168.112.2',8080))
 # serverSock.bind(('192.168.43.60',8080))
+
+print('sock_listen')
+
 serverSock.listen(1)
+
+print("sock_set")
+
+
+
+end_flag = False
+start_flag = True
+home_flag = False
+
 move_base_result_status = None
+move_base_fail_cnt = 0
+
+
 
 connectionSock, addr = serverSock.accept()
 
@@ -134,6 +162,9 @@ def batterty_callback(data):
 def charging_client():
     global cur_mode
     global charging_result
+    global connectionSock
+
+
     if cur_mode == 'air_condition':
         cur_mode = 'charging'
         # cancel_mod_pub('air_cleaning')
@@ -144,15 +175,30 @@ def charging_client():
         cur_mode = 'charging'
 
     # Sends the goal to the action server.
+
+    msg = str(9)
+    print("msg : ",msg)
+    connectionSock.send(msg.encode('utf-8'))
+    print("send_msg : ",msg)
+
+
     robot_mode_pub.publish("charging")
 
-    result = movebase_client(-6.498,-4.263)
+    
+
+    result = movebase_client(-0.428,-15.641)
+
+    result = movebase_client(-6.107,-4.183)
+
+    turn_srv(267)
+
+
 
 
     # Prints out the result of executing the action
     #charging end operat
-
-    return  charging_result # A chargingResult
+    
+     # A chargingResult
 
 # def charging_client(): #origin
 #     global cur_mode
@@ -275,10 +321,13 @@ def floor_cleaning_client():
         return floor_result
 
 def movebase_client(x,y,z=1):
+    global move_base_fail_cnt
 
 
     clear_costmaps_srv = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
     clear_costmaps_srv()
+
+    move_base_fail_cnt = 0
 
     rospy.sleep(1)
 
@@ -305,10 +354,32 @@ def recv_move_base_result(msg) :
 
     move_base_result_status = msg.status.status
 
+def recv_move_base_status(msg) :
+    global move_base_fail_cnt
+
+    if len(msg.status_list) >= 1 :
+        if msg.status_list[0].status == 4 :
+            move_base_fail_cnt += 1
+
+    if move_base_fail_cnt == 10 :
+        data = Bool
+
+        data.data = True
+        emergency_stop_pub.publish(data)
+
+        clear_costmaps_srv = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
+        clear_costmaps_srv()
+
+        move_base_fail_cnt = 0
+        rospy.sleep(1)
+
+        data.data = False
+        emergency_stop_pub.publish(data)
+
 class Scheduler(object):
     def __init__(self):
-        self.sched = BackgroundScheduler()
-        self.sched.start()
+        # self.sched = BackgroundScheduler()
+        # self.sched.start()
         self.job_id=''
         self.make_time(4,8)
         self.index = 0
@@ -319,16 +390,17 @@ class Scheduler(object):
 
     #all_kill jobs
     def shutdown(self):
-       self.sched.shutdown()
+    #    self.sched.shutdown()
+        None
 
     #kill_job
     def kill_scheduler(self, job_id):
-        try:
-            self.sched.remove_job(job_id)
-        except JobLookupError as err:
-            print "fail to stop scheduler: %s" % err
-        return
-
+        # try:
+        #     self.sched.remove_job(job_id)
+        # except JobLookupError as err:
+        #     print "fail to stop scheduler: %s" % err
+        return None
+    
     #operate func
     def hello(self, type,job_id):
         global  cur_mode
@@ -396,6 +468,9 @@ class Scheduler(object):
         global cur_mode
         global connectionSock
         global move_base_result_status
+        global end_flag
+        global start_flag
+        global home_flag
 
         cnt = 0
 
@@ -406,19 +481,13 @@ class Scheduler(object):
         #     {"x" : 3.15, "y" : -2.6 }
         #     ] ###gwang ju 
             
-#         roming_list = [
-#             {"x" : -5.604, "y" : -4.105, "z" : 84 },
-#             {"x" : -5.694, "y" : -3.622, "z" : 84 },
-#             {"x" : -4.198, "y" : -11.997, "z" : 338 },
-#             {"x" : -3.216, "y" : -0.66, "z" : 0 },
-#             {"x" : -5.278, "y" : -0.66, "z" : 0 }
-#             ] #example
+        # roming_list = [
+        #     {"x" : -5.568, "y" : 0.400, "z" : 84 },
+        #     {"x" : -0.581, "y" : -3.209, "z" : 84 }
+        #     ] #example
 
-#         1 : x : -5.60440178216y : -4.10512694604z : 0.01
-# 2 : x : -5.69443403474y : -2.00302750495z : 0.01
-# 3 : x : -4.19825455821y : -2.18175119315z : 0.01
-# 4 : x : -3.21655457727y : -3.51095214234z : 0.01
-# 5 : x : -5.2789029404y : -5.93232939075z : 0.01
+
+
 
         roming_list = [
             {"x" : 31.827, "y" : -13.402, "z" : 86 },
@@ -430,52 +499,66 @@ class Scheduler(object):
             ] #hub
 
 
-        if cur_mode == 'rest' :
-            cur_mode = 'air_condition'
-            result = movebase_client(roming_list[4]["x"],roming_list[4]["y"])
-
-        while cur_mode == 'air_condition' :
-            print("call_back")
-
-
-            robot_mode_pub.publish("air_condition")
-            result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
-
-            rospy.sleep(1)
-            print("done")
-
-            print("result : " + str(move_base_result_status))
-
-            if int(move_base_result_status) == 3 :
-                cnt = 0
-                print("in_turn")
-                turn_srv(roming_list[self.index]["z"])
-                msg = str(self.index)
-                print("msg : ",msg)
-                connectionSock.send(msg.encode('utf-8'))
-                print("send_msg : ",msg)
-
-                robot_mode_pub.publish("face_detect")
-                recv_msg = ''
-                while recv_msg != 'end' :
-                    recv_msg = connectionSock.recv(1024).decode("utf-8")
-                    print(recv_msg)
-
-            else :
-                cnt += 1
-                if cnt >= 3 :
-                    None
-                else :
-                    continue
-                
+        rospy.sleep(1)
+        
+        while True :
             
+            rospy.sleep(0.1)
+            robot_mode_pub.publish("normal")
+            if start_flag :
 
-            self.index += 1
-            if self.index >= len(roming_list) :
+                if cur_mode == 'rest' :
+                    cur_mode = 'air_condition'
+                    result = movebase_client(roming_list[4]["x"],roming_list[4]["y"])
+                    start_flag = False
+
+                while cur_mode == 'air_condition' :
+                    print("call_back")
+
+
+                    robot_mode_pub.publish("air_condition")
+                    result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
+
+                    rospy.sleep(1)
+                    print("done")
+
+                    print("result : " + str(move_base_result_status))
+
+
+                    if int(move_base_result_status) == 3 and home_flag == False :
+                        cnt = 0
+                        print("in_turn")
+                        turn_srv(roming_list[self.index]["z"])
+                        msg = str(self.index)
+                        print("msg : ",msg)
+                        connectionSock.send(msg.encode('utf-8'))
+                        print("send_msg : ",msg)
+
+                        robot_mode_pub.publish("face_detect")
+                        recv_msg = ''
+                        while not end_flag :
+                            rospy.sleep(0.1)
+                        end_flag = False
+
+                    elif home_flag == False :
+                        cnt += 1
+                        if cnt >= 3 :
+                            cnt = 0
+                            None
+                        else :
+                            continue
+                        
+                    
+
+                    self.index += 1
+                    if self.index >= len(roming_list) :
+                        self.index = 0
+
+
                 self.index = 0
 
-
-        self.index = 0
+            else :
+                rospy.sleep(0.2)
 
     def go_home(self,type,job_id) :
         robot_mode_pub.publish("charging")
@@ -485,42 +568,72 @@ class Scheduler(object):
 
     def scheduler(self,type, job_id):
 
-        if job_id == 'job_id':
-            self.sched.add_job(self.hello, type, seconds=10, id=job_id, args=('interval',job_id))
-        elif job_id == 'air_condition':
-            # self.sched.add_job(self.air_clean, type, seconds=10, id=job_id, args=('interval',job_id))
-            print("sche")
-            self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
-        elif job_id == 'roming_':
-            # self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
-            # self.sched.add_job(self.roming_move, 'cron', day_of_week='tue-sun', hour='9,13', minute='0', id=job_id, args=('cron',job_id))
-            self.sched.add_job(self.roming_move, 'cron', day_of_week='mon-sun', hour='13', minute='35', id=job_id, args=('cron',job_id))
-        elif job_id == 'floor_cleaning':
-            self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-fri',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
-        elif job_id == 'charging' :
-            #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
-            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='9,10,11,13,14,15,16,17,18', minute='0, 10, 20, 30, 40, 50', id='charging', args=('cron',job_id))
-        elif job_id == 'charging_cancel' :
-            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='9,10,11,13,14,15,16,17,18', minute='5, 15, 25, 35, 45, 55', id='charging_cancel', args=('cron',job_id))
-        elif job_id == 'charging_noon' :
-            #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
-            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='12', minute='0', id='charging_noon', args=('cron',job_id))
-        elif job_id == 'charging_cancel_noon' :
-            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='13', minute='10', id='charging_cancel_noon', args=('cron',job_id))  
+        None
 
+        # if job_id == 'job_id':
+        #     self.sched.add_job(self.hello, type, seconds=10, id=job_id, args=('interval',job_id))
+        # elif job_id == 'air_condition':
+        #     # self.sched.add_job(self.air_clean, type, seconds=10, id=job_id, args=('interval',job_id))
+        #     print("sche")
+        #     self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
+        # elif job_id == 'roming_':
+        #     # self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
+        #     # self.sched.add_job(self.roming_move, 'cron', day_of_week='tue-sun', hour='9,13', minute='0', id=job_id, args=('cron',job_id))
+        #     self.sched.add_job(self.roming_move, 'cron', day_of_week='mon-sun', hour='10', minute='01', id=job_id, args=('cron',job_id))
+        # elif job_id == 'floor_cleaning':
+        #     self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-fri',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
+        # elif job_id == 'charging' :
+        #     #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
+        #     self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='9,10,11,13,14,15,16,17,18', minute='0, 10, 20, 30, 40, 50', id='charging', args=('cron',job_id))
+        # elif job_id == 'charging_cancel' :
+        #     self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='9,10,11,13,14,15,16,17,18', minute='5, 15, 25, 35, 45, 55', id='charging_cancel', args=('cron',job_id))
+        # elif job_id == 'charging_noon' :
+        #     #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
+        #     self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='12', minute='0', id='charging_noon', args=('cron',job_id))
+        # elif job_id == 'charging_cancel_noon' :
+        #     self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='13', minute='10', id='charging_cancel_noon', args=('cron',job_id))  
+
+def socketRecvThre() :
+    global connectionSock
+    global end_flag
+    global start_flag
+    global home_flag
+    global cur_mode
+
+    while True :
+        recv_msg = connectionSock.recv(1024).decode("utf-8")
+        print(recv_msg)
+
+        if recv_msg == "end" :
+            end_flag = True
+
+        elif recv_msg == "start" :
+            cur_mode = "rest"
+            start_flag = True
+        
+        elif recv_msg == "home" :
+            home_flag = True
+            charging_client()
+
+        rospy.sleep(0.1)
 
 
 if __name__ == '__main__':
     rospy.init_node('robot_schedule')
-    rospy.Subscriber("battery",String, batterty_callback)
-
+    rospy.Subscriber("battery",UInt16, batterty_callback)
     rospy.Subscriber("/move_base/result", MoveBaseActionResult, recv_move_base_result)
+    rospy.Subscriber("/move_base/status",GoalStatusArray,recv_move_base_status)
 
     scheduler = Scheduler()
 
     module_controller_srv("air_lv2_on")
 
     module_controller_srv("uvc_on")
+ 
+    # daemon the
+    t1 = threading.Thread(target=socketRecvThre)
+    t1.daemon = True 
+    t1.start()
 
     # scheduler.scheduler('cron', "floor_cleaning")
 
@@ -534,7 +647,8 @@ if __name__ == '__main__':
     # scheduler.scheduler('cron', "charging_cancel")
     print("ready")
 
-    scheduler.scheduler('cron', "roming_")
+    # scheduler.scheduler('cron', "roming_")
+    scheduler.roming_move('cron','roming_')
 
     count = 0
     # while True:

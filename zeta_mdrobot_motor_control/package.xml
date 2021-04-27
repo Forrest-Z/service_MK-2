@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>mdrobot_motor_control_test</name>
+  <name>zeta_mdrobot_motor_control</name>
   <version>0.0.0</version>
   <description>The mdrobot_motor_control_test package</description>
 

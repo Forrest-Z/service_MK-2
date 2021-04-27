@@ -13,11 +13,12 @@ from zetabot_main.msg import MoveMsgs
 from zetabot_main.msg import ScheduleAirAction, ScheduleAirGoal
 from zetabot_main.msg import ScheduleFullcoverageAction, ScheduleFullcoverageGoal
 # from autocharge.msg import ChargingAction, ChargingActionGoal, ChargingGoal
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from zetabot_main.srv import ModuleControllerSrv
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
+from zetabot_main.srv import ModuleControllerSrv, TurnSrv
 from std_srvs.srv import Empty
-import my_first_ros_pkg.msg
+import scheduler.msg
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from socket import *
 
 
 cur_mode = 'rest'
@@ -34,7 +35,19 @@ move_vel_pub = rospy.Publisher('/move_vel',MoveMsgs,queue_size=10)
 robot_mode_pub = rospy.Publisher('/robot_mode',String,queue_size=10)
 power_ctl_pub =  rospy.Publisher('power_ctl', String, queue_size=10)
 
+turn_srv = rospy.ServiceProxy('turn', TurnSrv)
+
+
+
 module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
+
+serverSock = socket(AF_INET, SOCK_STREAM)
+serverSock.bind(('192.168.112.2',8080))
+# serverSock.bind(('192.168.43.60',8080))
+serverSock.listen(1)
+move_base_result_status = None
+
+connectionSock, addr = serverSock.accept()
 
 def initial_pos_pub():
     publisher = rospy.Publisher('initialpose', PoseWithCovarianceStamped, queue_size=10)
@@ -244,6 +257,8 @@ def movebase_client(x,y,z=1):
     clear_costmaps_srv = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
     clear_costmaps_srv()
 
+    rospy.sleep(1)
+
     client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
     client.wait_for_server()
 
@@ -261,6 +276,11 @@ def movebase_client(x,y,z=1):
         # rospy.signal_shutdown("Action server not available!")
     else:
         return client.get_result()
+
+def recv_move_base_result(msg) :
+    global move_base_result_status
+
+    move_base_result_status = msg.status.status
 
 class Scheduler(object):
     def __init__(self):
@@ -348,28 +368,153 @@ class Scheduler(object):
         
     def roming_move(self,type, job_id) :
         global cur_mode
-        if cur_mode == 'rest' or cur_mode == 'air_condition':
-            print("call_back")
-            # roming_list = [  
-            #     {"x" : 6.0, "y" : 1.46 },
-            #     {"x" : 6.42, "y" : -2.81 },
-            #     {"x" : 2.8, "y" : 1.46 },
-            #     {"x" : 3.15, "y" : -2.6 }
-            #     ] ###gwang ju 
-            
-            roming_list = [
-                {"x" : 0.42, "y" : -1.74 },
-                {"x" : 4.35, "y" : 0.023 },
-                {"x" : 3.316, "y" : 2.301 },
-                {"x" : 0.66, "y" : -0.66 }
-                ] #hub
+        global connectionSock
+        global move_base_result_status
 
-            robot_mode_pub.publish("air_condition")           
-            result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
+        cnt = 0
+
+        # roming_list = [  
+        #     {"x" : 6.0, "y" : 1.46 },
+        #     {"x" : 6.42, "y" : -2.81 },
+        #     {"x" : 2.8, "y" : 1.46 },
+        #     {"x" : 3.15, "y" : -2.6 }
+        #     ] ###gwang ju 
             
+#         roming_list = [
+#             {"x" : -5.604, "y" : -4.105, "z" : 84 },
+#             {"x" : -5.694, "y" : -3.622, "z" : 84 },
+#             {"x" : -4.198, "y" : -11.997, "z" : 338 },
+#             {"x" : -3.216, "y" : -0.66, "z" : 0 },
+#             {"x" : -5.278, "y" : -0.66, "z" : 0 }
+#             ] #example
+
+#         1 : x : -5.60440178216y : -4.10512694604z : 0.01
+# 2 : x : -5.69443403474y : -2.00302750495z : 0.01
+# 3 : x : -4.19825455821y : -2.18175119315z : 0.01
+# 4 : x : -3.21655457727y : -3.51095214234z : 0.01
+# 5 : x : -5.2789029404y : -5.93232939075z : 0.01
+
+        roming_list = [
+            {"x" : 31.827, "y" : -13.402, "z" : 86 },
+            {"x" : 23.706, "y" : -8.914, "z" :  179},
+            {"x" : 13.925, "y" : -11.946, "z" : 86 },
+            {"x" : 2.968, "y" : -14.259, "z" :  305},
+            {"x" : -0.428, "y" : -15.641, "z" : 264 }
+            # {"x" : 0.66, "y" : -0.66, "z" : 0 }
+            ] #hub
+
+
+        if cur_mode == 'rest' :
+            cur_mode = 'roming_move'
+
+
+            input_msg = None
+
+
+            while not input_msg == 1 :
+                input_msg = input("next(1)")
+
+            turn_srv(205)
+
+            input_msg = None
+
+
+            while not input_msg == 1 :
+                input_msg = input("next(1)")
+
+            msg = str(9)
+            print("msg : ",msg)
+            connectionSock.send(msg.encode('utf-8'))
+            print("send_msg : ",msg)
+
+            robot_mode_pub.publish("face_detect")
+
+            rospy.sleep(3)
+
+
+            robot_mode_pub.publish("air_condition")
+
+            result = movebase_client(roming_list[1]["x"],roming_list[1]["y"])
+            turn_srv(roming_list[1]["z"])
+
+            msg = str(8)
+            print("msg : ",msg)
+            connectionSock.send(msg.encode('utf-8'))
+            print("send_msg : ",msg)
+
+            robot_mode_pub.publish("face_detect")
+            recv_msg = ''
+
+            input_msg = None
+
+            while not input_msg == 1 :
+                input_msg = input("next(1)")
+
+            msg = str(5)
+            print("msg : ",msg)
+            connectionSock.send(msg.encode('utf-8'))
+            print("send_msg : ",msg)
+
+            input_msg = None
+
+            while not input_msg == 1 :
+                input_msg = input("next(1)")
+
+
+            msg = str(7)
+            print("msg : ",msg)
+            connectionSock.send(msg.encode('utf-8'))
+            print("send_msg : ",msg)
+
+            recv_msg = ''
+            while recv_msg != 'end' :
+                recv_msg = connectionSock.recv(1024).decode("utf-8")
+                print(recv_msg)
+
+            robot_mode_pub.publish("air_condition")
+
+        while cur_mode == 'roming_move' :
+            print("call_back")
+
+
+            robot_mode_pub.publish("air_condition")
+            result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
+
+            rospy.sleep(1)
+            print("done")
+
+            print("result : " + str(move_base_result_status))
+
+            if int(move_base_result_status) == 3 :
+                cnt = 0
+                print("in_turn")
+                turn_srv(roming_list[self.index]["z"])
+                msg = str(self.index)
+                print("msg : ",msg)
+                connectionSock.send(msg.encode('utf-8'))
+                print("send_msg : ",msg)
+
+                robot_mode_pub.publish("face_detect")
+                recv_msg = ''
+                while recv_msg != 'end' :
+                    recv_msg = connectionSock.recv(1024).decode("utf-8")
+                    print(recv_msg)
+
+            else :
+                cnt += 1
+                if cnt >= 3 :
+                    None
+                else :
+                    continue
+                
+            
+
             self.index += 1
-            if self.index >= 4 :
+            if self.index >= len(roming_list) :
                 self.index = 0
+
+
+        self.index = 0
 
     def go_home(self,type,job_id) :
         robot_mode_pub.publish("charging")
@@ -386,7 +531,9 @@ class Scheduler(object):
             print("sche")
             self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
         elif job_id == 'roming_':
-            self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
+            # self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
+            # self.sched.add_job(self.roming_move, 'cron', day_of_week='tue-sun', hour='9,13', minute='0', id=job_id, args=('cron',job_id))
+            self.sched.add_job(self.roming_move, 'cron', day_of_week='mon-sun', hour='19', minute='32', id=job_id, args=('cron',job_id))
         elif job_id == 'floor_cleaning':
             self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-fri',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
         elif job_id == 'charging' :
@@ -406,9 +553,13 @@ if __name__ == '__main__':
     rospy.init_node('robot_schedule')
     rospy.Subscriber("battery",String, batterty_callback)
 
+    rospy.Subscriber("/move_base/result", MoveBaseActionResult, recv_move_base_result)
+
     scheduler = Scheduler()
 
     module_controller_srv("air_lv2_on")
+
+    module_controller_srv("uvc_on")
 
     # scheduler.scheduler('cron', "floor_cleaning")
 
@@ -420,13 +571,16 @@ if __name__ == '__main__':
     # scheduler.scheduler('interval', "roming_")
 
     # scheduler.scheduler('cron', "charging_cancel")
+    print("ready")
 
-    scheduler.scheduler('interval', "air_condition")
+    scheduler.scheduler('cron', "roming_")
 
     count = 0
-    while True:
-        # print "Running main process..............."
-        rospy.sleep(1)
-        count += 1
-        #scheduler.kill_scheduler("1")
-        # print "######### kill cron schedule ##########"
+    # while True:
+    #     # print "Running main process..............."
+    #     rospy.sleep(1)
+    #     count += 1
+    #     #scheduler.kill_scheduler("1")
+    #     # print "######### kill cron schedule ##########"
+
+    rospy.spin()

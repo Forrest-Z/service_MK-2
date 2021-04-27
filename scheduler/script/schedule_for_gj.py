@@ -16,7 +16,7 @@ from zetabot_main.msg import ScheduleFullcoverageAction, ScheduleFullcoverageGoa
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
 from zetabot_main.srv import ModuleControllerSrv, TurnSrv
 from std_srvs.srv import Empty
-import my_first_ros_pkg.msg
+import scheduler.msg
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from socket import *
 
@@ -126,12 +126,35 @@ def batterty_callback(data):
     global cur_mode
     global charging_result
     #battery full > 1100
-    if int(data.data) < 400 and cur_mode != 'charging':
+    if int(data.data) < 450 and cur_mode != 'charging':
         charging_client()
     if int(data.data) > 1100 and cur_mode == 'charging' :
         charging_cancel_pub.publish(True)
 
-# def charging_client():
+def charging_client():
+    global cur_mode
+    global charging_result
+    if cur_mode == 'air_condition':
+        cur_mode = 'charging'
+        # cancel_mod_pub('air_cleaning')
+    elif cur_mode == 'full_coverage':
+        cur_mode = 'charging'
+        # cancel_mod_pub('floor_cleaning')
+    elif cur_mode == 'rest':
+        cur_mode = 'charging'
+
+    # Sends the goal to the action server.
+    robot_mode_pub.publish("charging")
+
+    result = movebase_client(-6.498,-4.263)
+
+
+    # Prints out the result of executing the action
+    #charging end operat
+
+    return  charging_result # A chargingResult
+
+# def charging_client(): #origin
 #     global cur_mode
 #     global charging_result
 #     if cur_mode == 'air_condition':
@@ -327,6 +350,9 @@ class Scheduler(object):
         global cur_mode
         cur_mode = "charging"
         result = charging_client()
+        
+        result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
+
         print("Result:" + result.result)
         if result.result == 'charging_cancel':
             print("charging_cancel result" + result.result)
@@ -405,75 +431,10 @@ class Scheduler(object):
 
 
         if cur_mode == 'rest' :
-            cur_mode = 'roming_move'
+            cur_mode = 'air_condition'
+            result = movebase_client(roming_list[4]["x"],roming_list[4]["y"])
 
-
-            input_msg = None
-
-
-            while not input_msg == 1 :
-                input_msg = input("next(1)")
-
-            turn_srv(205)
-
-            input_msg = None
-
-
-            while not input_msg == 1 :
-                input_msg = input("next(1)")
-
-            msg = str(9)
-            print("msg : ",msg)
-            connectionSock.send(msg.encode('utf-8'))
-            print("send_msg : ",msg)
-
-            robot_mode_pub.publish("face_detect")
-
-            rospy.sleep(3)
-
-
-            robot_mode_pub.publish("air_condition")
-
-            result = movebase_client(roming_list[1]["x"],roming_list[1]["y"])
-            turn_srv(roming_list[1]["z"])
-
-            msg = str(8)
-            print("msg : ",msg)
-            connectionSock.send(msg.encode('utf-8'))
-            print("send_msg : ",msg)
-
-            robot_mode_pub.publish("face_detect")
-            recv_msg = ''
-
-            input_msg = None
-
-            while not input_msg == 1 :
-                input_msg = input("next(1)")
-
-            msg = str(5)
-            print("msg : ",msg)
-            connectionSock.send(msg.encode('utf-8'))
-            print("send_msg : ",msg)
-
-            input_msg = None
-
-            while not input_msg == 1 :
-                input_msg = input("next(1)")
-
-
-            msg = str(7)
-            print("msg : ",msg)
-            connectionSock.send(msg.encode('utf-8'))
-            print("send_msg : ",msg)
-
-            recv_msg = ''
-            while recv_msg != 'end' :
-                recv_msg = connectionSock.recv(1024).decode("utf-8")
-                print(recv_msg)
-
-            robot_mode_pub.publish("air_condition")
-
-        while cur_mode == 'roming_move' :
+        while cur_mode == 'air_condition' :
             print("call_back")
 
 
@@ -533,7 +494,7 @@ class Scheduler(object):
         elif job_id == 'roming_':
             # self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
             # self.sched.add_job(self.roming_move, 'cron', day_of_week='tue-sun', hour='9,13', minute='0', id=job_id, args=('cron',job_id))
-            self.sched.add_job(self.roming_move, 'cron', day_of_week='mon-sun', hour='19', minute='32', id=job_id, args=('cron',job_id))
+            self.sched.add_job(self.roming_move, 'cron', day_of_week='mon-sun', hour='13', minute='35', id=job_id, args=('cron',job_id))
         elif job_id == 'floor_cleaning':
             self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-fri',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
         elif job_id == 'charging' :
