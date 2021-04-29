@@ -2,9 +2,8 @@
 import rospy
 import time
 
-from std_msgs.msg import String, UInt16
+from std_msgs.msg import UInt16
 
-from full_coverage.srv import Fullpath
 from zetabot_main.srv import ModuleControllerSrv
 from zetabot_main.msg import ModuleControlMsgs
 from threading import Thread
@@ -19,8 +18,8 @@ from threading import Thread
 #-------------------------------------------------
 
 module_controller_topic = "/module_control_NUC"
-purifier_topic = "/purifier_command"
 module_control_pub = rospy.Publisher(module_controller_topic,ModuleControlMsgs,queue_size=10)
+purifier_topic = "/purifier_command"
 purifier_pub = rospy.Publisher(purifier_topic,UInt16,queue_size=10)
 
 module_controll_command = ModuleControlMsgs()
@@ -44,7 +43,6 @@ module_control_target_dict = {
 
 led_count_number = 69
 
-blink_flag = False
 led_color = [0,0,0]
 blink_term = 0
 led_count = 0
@@ -60,8 +58,6 @@ led_color_RGB = {
     "blue" : [0,0,255],
     "orange" : [255,128,0]
 }
-
-
 
 pulifier_level = {
     "off" : 0,
@@ -169,43 +165,6 @@ def module_controller(comm_list):
 
     return (str(module_controll_command))
 
-
-def led_blink():
-    None
-    # global module_controll_command
-    # global blink_flag
-    # global blink_term
-    # global led_color
-    # i = True
-    # start_time = 0
-    # k=0
-
-    # while True :
-    #     if not blink_flag :
-    #         continue
-
-    #     elif start_time == 0 :
-    #         print("on")
-    #         start_time = time.time()
-    #         led_blink_count = int(i) * led_count
-    #         module_controll_command.led[3] = int(led_blink_count)
-    #         module_controll_command.time_stamp = k
-    #         print(module_controll_command)
-    #         k += 1
-
-    #     elif (time.time() - start_time) >= float(blink_term) :
-    #         i = not(i)
-    #         led_blink_count = int(i) * led_count
-    #         module_controll_command.led[3] = int(led_blink_count)
-    #         start_time = time.time()
-    #         module_controll_command.time_stamp = k
-    #         print(module_controll_command)
-    #         k += 1
-        
-
-        
-
-
 def pub_thread() :
     global module_controll_command
     global purifier_pub
@@ -227,21 +186,21 @@ def main() :
 
     rospy.sleep(1)
 
-    pubThrd = Thread(target=pub_thread, args=())  # thread to process received packets
-    pubThrd.daemon = True
-    pubThrd.start()
-
-    led_blink_Thrd = Thread(target=led_blink, args=())  # thread to process received packets
-    led_blink_Thrd.daemon = True
-    led_blink_Thrd.start()
-
     module_controll_command = ModuleControlMsgs()
 
     module_control_pub.publish(module_controll_command)
 
-    print(module_controll_command)
+    purifier_command = purifier_command = UInt16()
+    purifier_pub.publish(purifier_command)
+
 
     srv = rospy.Service('module_controller_srv', ModuleControllerSrv, module_controller)
+
+
+    pubThrd = Thread(target=pub_thread, args=())  # thread to process received packets
+    pubThrd.daemon = True
+    pubThrd.start()
+
     print("Module_control Ready")
     print("-"*20)
 
