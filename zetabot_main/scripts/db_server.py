@@ -11,7 +11,7 @@ from std_srvs.srv import Empty
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import zetabot_main.msg
 import actionlib
-import testhash
+import hash_checker
 
 
 ### configurations that can be changed
@@ -24,7 +24,7 @@ gPort = 7777
 # gHost = "192.168.0.50"
 gSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-g_send_hashmap = testhash.hashmap()
+g_send_hashmap = hash_checker.hashmap()
 g_socket_connected = False
 
 class MobeBaseAction(object):

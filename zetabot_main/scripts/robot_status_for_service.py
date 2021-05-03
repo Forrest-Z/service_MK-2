@@ -212,9 +212,6 @@ class RobotStatus:
             
 
 class led_controller(RobotStatus) :
-
-
-
     def __init__(self) :
         RobotStatus.__init__(self)
         self.led_pub = RosMaker("pub","/led_command",UInt64)
