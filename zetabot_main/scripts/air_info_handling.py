@@ -98,14 +98,14 @@ def air_info_recv(msg) :
 
     if int(air_info_dict["Fine_dust"]) > 100 or int(air_info_dict["Ultrafine_dust"]) > 100 :
         air_class = "c"
-        module_controller_srv("air_lv3_on")
+        module_controller_srv("air_lv3")
         print(air_info_dict["Fine_dust"],air_info_dict["Ultrafine_dust"])
     elif int(air_info_dict["Fine_dust"]) < 50 or int(air_info_dict["Ultrafine_dust"]) < 50 :
         air_class = "a"
-        module_controller_srv("air_lv1_on")
+        module_controller_srv("air_lv1")
     else :
         air_class = "b"
-        module_controller_srv("air_lv2_on")
+        module_controller_srv("air_lv2")
 
     # if not air_info_dict["sensor"][0]["cell_name"] == "empty" :
     if air_info_dict["cell_name"] == "B3" or air_info_dict["cell_name"] == "B7" or air_info_dict["cell_name"] == "B13" :

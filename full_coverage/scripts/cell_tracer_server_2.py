@@ -23,8 +23,6 @@ x_val = 0.2
 a_val = 0.2
 
 module_controll_command = 0b0000000000000000
-module_controller_topic = "/module_control_NUC"
-module_control_pub = rospy.Publisher(module_controller_topic,String,queue_size=10)
 module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
 
 
@@ -514,10 +512,10 @@ def serviceproccess(req):
     
 
     # start = time.time()
-    # module_controller("sol_on")
+    # module_controller_srv("pump_on")
     # while (time.time() - start) <= 1 :
     #     pass
-    # module_controller("sol_off")
+    # module_controller_srv("pump_off")
 
     return 100
 
@@ -784,55 +782,6 @@ def coner_coverage(location,direction,x_pre,y_pre):
             trun(side_wall,direction)
             go2back(back_distance)
 
-def module_controller(*args):
-
-    for i in args :
-        module_controller_srv(i)
-        print("module_controll",i)
-        rospy.sleep(0.1)
-
-    # global module_controll_command
-
-    # # |     RESERVE   |       LED        |    Pulifier      |  pump     |Reserve| UVC |
-    # # | 0  1  2  3  4 |  5     6    7    |  8   9   10  11  | 12   13   |  14   | 15  |
-    # # | X  X  X  X  X |  LEDG  LEDB LEDR |  L4  L3  L2  L1  | SOL  PUMP |  X    | UVC |
-
-
-    # # LED R, G, B   9, 5, 3
-
-
-    # module_controll_dict = {
-    #     "pump" : 0b0000000000001100,
-    #     "UVC"  : 0b0000000000000001,
-    #     "LEDG" : 0b0000010100000000,
-    #     "LEDB" : 0b0000001100000000,
-    #     "LEDR" : 0b0000100100000000,
-    #     "LED"  : 0b0000111100000000,
-    #     "all"  : 0b1111111111111111
-    # }
-
-    
-
-    # for i in args :
-    #     if "_off" in i :
-    #         print(i[:-1*(len("_off"))])
-    #         command = ~ module_controll_dict[i[:-1*(len("_off"))]]
-    #         module_controll_command = command & module_controll_command
-    #     elif "_on" in i :
-    #         print(i[:-1*(len("_on"))])
-    #         command = module_controll_dict[i[:-1*(len("_on"))]]
-    #         module_controll_command = command | module_controll_command
-        
-
-    # module_controll_command_str = str(hex(module_controll_command)).upper()[2:].zfill(4)
-    
-
-    # print(module_controll_command_str)
-
-    # print(args)
-
-    # module_control_pub.publish(module_controll_command)
-
 def main():
     global timer
     
@@ -849,12 +798,12 @@ def main():
     warning_topic = "/lidar_warning"
     rospy.Subscriber(warning_topic,lidar_filter,stop_warning_send)
 
-    # module_controller("uvc_on","pump_on","sol_on")
+    # module_controller_srv("uvc_on","pump_on")
 
     srv = rospy.Service('fullpathmove', Fullpath, serviceproccess)
 
     if rospy.is_shutdown():
-        module_controller("uvc_off","pump_off","sol_off")
+        module_controller_srv("uvc_off","pump_off")
 
     rospy.spin()
 

@@ -22,14 +22,14 @@ from threading import Thread
 
 class Led :
     Color = {
-        "off" = 0x000000,
-        "white" = 0xffffff,
-        "blue" = 0x0000ff,
-        "sky" = 0x00ffff,
-        "green" = 0x00ff00,
-        "yellow" = 0xffff00,
-        "red" = 0xff0000,
-        "orange" = 0xff7800
+        "off" : 0x000000,
+        "white" : 0xffffff,
+        "blue" : 0x0000ff,
+        "sky" : 0x00ffff,
+        "green" : 0x00ff00,
+        "yellow" : 0xffff00,
+        "red" : 0xff0000,
+        "orange" : 0xff7800
     }
 
     # class Color:
@@ -43,14 +43,14 @@ class Led :
     #     orange = 0xF0A30B
 
     Mode = {
-        "off" = 0x0,
-        "on" = 0x1,
-        "blink" = 0x2,
-        "blink_fast" = 0x3,
-        "fade" = 0x4,
-        "sweep" = 0x5,
-        "sweep_fast" = 0x6,
-        "stay" = 0xff
+        "off" : 0x0,
+        "on" : 0x1,
+        "blink" : 0x2,
+        "blink_fast" : 0x3,
+        "fade" : 0x4,
+        "sweep" : 0x5,
+        "sweep_fast" : 0x6,
+        "stay" : 0xff
     }
 
 class LedControl :
@@ -59,7 +59,7 @@ class LedControl :
         self.b_color_ = 0x000000
 
         led_command_topic = "/led_command"
-        self.led_command_pub = rospy.Publisher(led_commandler_topic,ModuleControlMsgs,queue_size=10)
+        self.led_command_pub = rospy.Publisher(led_command_topic,UInt64,queue_size=10)
 
  
     def led_control(self,f_mode,f_color,b_mode,b_color) :
@@ -90,12 +90,9 @@ class ModuleController :
             "lv3" : 400
         }
 
-        self.led_command = UInt64()
         self.purifier_command = UInt16()
         self.uvc_command = Bool()
         self.pump_command = Bool()
-
-
 
         purifier_topic = "/purifier_command"
         self.purifier_pub = rospy.Publisher(purifier_topic,UInt16,queue_size=10)
@@ -119,7 +116,7 @@ class ModuleController :
         rospy.sleep(0.1)
 
 
-        module_control_srv = rospy.Service('module_controller_srv', ModuleControllerSrv, self.module_controller)
+        module_control_srv = rospy.Service('/module_controller_srv', ModuleControllerSrv, self.module_controller)
 
 
 
@@ -128,17 +125,19 @@ class ModuleController :
         comm_list = comm_list.command.split(",")
 
         for i in comm_list :
-            comm = i.split("_")
+            
             print(i)
-            if "led" == comm[0]  :
+            if "led" in i  :
+                comm = i.split("/")
                 self.led_controller.led_control(comm[1],comm[2],comm[3],comm[4])
 
-            elif "air" == comm[0] :
+            elif "air"  in i :
+                comm = i.split("_")
                 print("air")
                 self.purifier_command.data = self.pulifier_level[comm[1]]
                 self.purifier_pub.publish(self.purifier_command)
 
-            elif "uvc" == comm[0] :
+            elif "uvc"  in i :
                 if "_on" in i :
                     self.uvc_command.data = True
                 elif "_off" in i :
@@ -146,7 +145,7 @@ class ModuleController :
                     
                 self.uvc_pub.publish(self.uvc_command)
             
-            elif "pump" == comm[0] :
+            elif "pump"  in i :
                 if "_on" in i :
                     self.pump_command.data = True
                 elif "_off" in i :

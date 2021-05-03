@@ -101,87 +101,50 @@ def getKey():
 def vels(target_linear_vel, target_angular_vel):
     return "currently:\tlinear vel %s\t angular vel %s " % (target_linear_vel,target_angular_vel)
 
-def led_controll(f_mode,b_mode,f_color,b_color) :
-    global f_color_
-    global b_color_
-    
-    led_command_pub = rospy.Publisher("/led_command",UInt64,queue_size = 10)
-
-    if f_color == 0x000000 :
-        f_color = f_color_
-    if b_color == 0x000000 :
-        b_color = b_color_
-
-    f_color_, b_color_ = f_color, b_color
-    command = ((f_mode << 24) | f_color) << 32 | ((b_mode << 24) | b_color)
-    led_command_pub.publish(command)
-    print(hex(command))
-
 def status_led(num):
+    module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
+
     if num == 1:
-        f_led_mode = Led.Mode.blink_fast
-        b_led_mode = Led.Mode.blink_fast
-        f_led_color = Led.Color.red
-        b_led_color = Led.Color.red
+        comm = "/blink_fast/red/blick_fast/red"
 
         
     elif num == 2:
         print("low_battery")
-        f_led_mode = Led.Mode.on
-        b_led_mode = Led.Mode.on
-        f_led_color = Led.Color.red
-        b_led_color = Led.Color.red
+        comm = "/on/red/on/red"
+
 
     elif num == 3:
         print("service")
-        f_led_mode = Led.Mode.on
-        b_led_mode = Led.Mode.on
-        f_led_color = Led.Color.yellow
-        b_led_color = Led.Color.white
+        comm = "/on/yellow/on/white"
 
     elif num == 4:
         print("QR_code")
-        f_led_mode = Led.Mode.sweep
-        f_led_color = Led.Color.blue
-        b_led_mode = Led.Mode.stay
-        b_led_color = Led.Color.stay
+        comm = "/sweep/blue/stay/stay"
     
     elif num == 5:
         print("face_detect")
-        f_led_mode = Led.Mode.sweep
-        f_led_color = Led.Color.green
-        b_led_mode = Led.Mode.stay
-        b_led_color = Led.Color.stay
+        comm = "/sweep/green/stay/stay"
+
 
     elif num == 6:
         print("normal")
-        f_led_mode = Led.Mode.on
-        b_led_mode = Led.Mode.on
-        f_led_color = Led.Color.white
-        b_led_color = Led.Color.white
+        comm = "/on/white/on/white"
+
 
     elif num == 7:
         print("full_coverage")
-        f_led_mode = Led.Mode.on
-        b_led_mode = Led.Mode.on
-        f_led_color = Led.Color.blue
-        b_led_color = Led.Color.blue
+        comm = "/on/blue/on/blue"
 
     elif num == 8:
         print("air_condition")
-        f_led_mode = Led.Mode.on
-        b_led_mode = Led.Mode.on
-        f_led_color = Led.Color.sky
-        b_led_color = Led.Color.sky
+        comm = "/on/sky/on/sky"
 
     elif num == 9 :
         print("speak")
-        f_led_mode = Led.Mode.sweep
-        f_led_color = Led.Color.yellow
-        b_led_mode = Led.Mode.stay
-        b_led_color = Led.Color.stay
+        comm = "/sweep/yellow/stay/stay"
     
-    led_controll(f_led_mode,b_led_mode,f_led_color,b_led_color)
+    module_controller_srv("led/"+comm)
+
 
 if __name__=="__main__":
     settings = termios.tcgetattr(sys.stdin)
@@ -252,6 +215,16 @@ if __name__=="__main__":
             #         print 'pump_off'
             #         module_controller_srv("pump_off")
             
+            elif key == 'u' :
+                status = status + 1
+                pump_power = not(pump_power)
+                if pump_power :
+                    print 'uvc_on'
+                    module_controller_srv("uvc_on")
+                else :
+                    print 'uvc_off'
+                    module_controller_srv("uvc_off")
+
             elif key in list(map(str,range(1,10))):
                 status = status + 1
                 print 'led_mode_' + str(key)
