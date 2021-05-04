@@ -145,8 +145,9 @@ class RobotStatus:
 
             if self.status_data["speak"] :
                 f_led_mode = Led.Mode.sweep
+                led_command = "sweep/stay/stay/stay"
                 if self.cur_robot_mode == 'normal' :
-                    f_led_color = Led.Color.yellow
+                    led_command = "sweep/yellow/stay/stay"
 
             self.module_controller_srv("led/"+led_command)
         except :

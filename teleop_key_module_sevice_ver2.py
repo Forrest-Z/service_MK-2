@@ -143,7 +143,7 @@ def status_led(num):
         print("speak")
         comm = "/sweep/yellow/stay/stay"
     
-    module_controller_srv("led/"+comm)
+    module_controller_srv("led"+comm)
 
 
 if __name__=="__main__":
