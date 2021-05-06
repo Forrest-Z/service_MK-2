@@ -63,6 +63,10 @@ find_package(catkin REQUIRED COMPONENTS
    EnvironmentMsgs.msg
    SonarArray.msg
    MoveMsgs.msg
+   SubPowerControlMsgs.msg
+   PowerControlMsgs.msg
+   EnvironmentMsgs.msg
+   BatteryInformationMsgs.msg
  )
 
 ## Generate services in the 'srv' folder
