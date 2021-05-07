@@ -4,14 +4,14 @@
     <include file="$(find realsense2_camera)/launch/rs_camera.launch">
   <!-- all vars that included.launch requires must be set -->
         <arg name="camera" value="cam_1" />
-        <arg name="serial_no" value="047322070492" />
+        <arg name="serial_no" value="048322071701" />
         <arg name="align_depth" value="True" />
     </include>
 
     <include file="$(find realsense2_camera)/launch/rs_camera.launch">
   <!-- all vars that included.launch requires must be set -->
         <arg name="camera" value="cam_2" />
-        <arg name="serial_no" value="048122071976" />
+        <arg name="serial_no" value="048122070995" />
         <arg name="align_depth" value="True" />
     </include>
 
