@@ -105,7 +105,7 @@ int mdrobot_motor_control::BytetoLInt(BYTE Data1Byte, BYTE Data2Byte, BYTE Data3
 
 int mdrobot_motor_control::InitSerial(void)
 {
-    //nBaudrate = 19200;
+    // nBaudrate = 19200;
 	nBaudrate = 115200;
 
     try
@@ -192,8 +192,8 @@ int mdrobot_motor_control::SetVelocity(short lVel, short rVel)
 	sendBuf[9] = velByte.LowByte;
 	sendBuf[10] = velByte.HighByte;
 	
-	sendBuf[11] = 0;
-	//sendBuf[11] = REQUEST_PNT_MAIN_DATA;
+	//sendBuf[11] = 0;
+	sendBuf[11] = REQUEST_PNT_MAIN_DATA;
 	
 	for(i = 0; i < (byPidDataSize-1); i++) 
 		byTempDataSum += sendBuf[i];

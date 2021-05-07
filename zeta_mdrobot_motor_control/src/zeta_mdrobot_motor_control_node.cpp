@@ -34,14 +34,14 @@
 #define DEBUG_MC
 
 #define VELCNT                           (1000/(CONTROL_MOTOR_SPEED_PERIOD))
-#define MAXDIFF_VELLIN                   0.5    // m/s
-#define MAXDIFF_VELANG                   0.4    // m/s
+#define MAXDIFF_VELLIN                   2.0    // m/s
+#define MAXDIFF_VELANG                   2.0    // m/s
 
 #define VELERRCNT                        CONTROL_MOTOR_SPEED_PERIOD  
 
-#define MAX_LINEAR_VELOCITY              1.0             // m/s
-#define MAX_ANGULAR_VELOCITY             1.0             // rad/s
-#define LINEAR_X_MAX_VELOCITY            1.0
+#define MAX_LINEAR_VELOCITY              2.0             // m/s
+#define MAX_ANGULAR_VELOCITY             3.0             // rad/s
+#define LINEAR_X_MAX_VELOCITY            2.0
 
 #define PI                               3.1415926535897932384626433832795
 #define MATH_RAD2DEG                     57.2957795f
@@ -263,7 +263,7 @@ void WheelControl(int* publish_rate)
             // Send PNT MONITOR requesting command to MDMC 
             // ==============================================
             //mdr_mc.SendReqPIDData(PID_PNT_MONITOR);
-            mdr_mc.SendReqPIDData(PID_PNT_MAIN_DATA);
+            //mdr_mc.SendReqPIDData(PID_PNT_MAIN_DATA);
             
             if(mdr_mc.b_recvOK)
             {
