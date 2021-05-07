@@ -1,20 +1,14 @@
+ACTION=="add", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0042",ATTRS{serial}=="55936343933351E0B060", MODE:="0666", SYMLINK+="ttyACM-AIR"
 
-#ACTION=="add", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE:="0666", SYMLINK+="ttyUSB-SB"
-
-#ACTION=="add", ATTRS{bcdDevice}=="0600", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", MODE:="0666", SYMLINK+="ttyUSB-SS"
-
-#ACTION=="add", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0042",ATTRS{serial}=="75830333438351703121", MODE:="0666", SYMLINK+="ttyACM-MODULE"
-
-#ACTION=="add", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0042",ATTRS{serial}=="55731323836351710100", MODE:="0666", SYMLINK+="ttyACM-IMU"
-
-ACTION=="add", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0042",ATTRS{serial}=="55936343933351913280", MODE:="0666", SYMLINK+="ttyACM-AIR"
-
-ACTION=="add", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", ATTRS{bcdDevice}=="0264", MODE:="0666", SYMLINK+="ttyUSB-PWR"
-
-ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{bcdDevice}=="0600",MODE:="0777", SYMLINK+="ttyUSB-MC"
+#ACTION=="add", ATTRS{idVendor}=="1d6b", ATTRS{idProduct}=="0002", ATTRS{serial}=="0000:00:14.0", MODE:="0666", SYMLINK+="ttyACM-PWR"
 
 
-#usb0
-#ACTION=="add", ATTRS{bcdDevice}=="0415", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="0002", MODE:="0777", SYMLINK+="ttyUSB-PW"
-#usb1
-#ACTION=="add", ATTRS{bcdDevice}=="9014", ATTRS{idVendor}=="2109", ATTRS{idProduct}=="2813", MODE:="0777", SYMLINK+="ttyUSB-MEGA"
+ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A75BR3PP",MODE:="0777", SYMLINK+="ttyUSB-MC"
+
+
+ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="AU02IORU",MODE:="0777", SYMLINK+="ttyUSB-PWR"
+
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="374b", \
+    MODE="660", GROUP="plugdev", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1", \
+    SYMLINK+="stlinkv2-1_%n"
+
