@@ -4,19 +4,19 @@ import rospy
 import os
 
 import actionlib
-from apscheduler.jobstores.base import JobLookupError
-from apscheduler.schedulers.background import BackgroundScheduler
+# from apscheduler.jobstores.base import JobLookupError
+# from apscheduler.schedulers.background import BackgroundScheduler
 import time
 from std_msgs.msg import Bool
 from std_msgs.msg import String
 from zetabot_main.msg import MoveMsgs
 from zetabot_main.msg import ScheduleAirAction, ScheduleAirGoal
 from zetabot_main.msg import ScheduleFullcoverageAction, ScheduleFullcoverageGoal
+from zetabot_main.msg import ChargingAction,ChargingActionGoal,ChargingFeedback,ChargingActionResult, ChargingGoal
 # from autocharge.msg import ChargingAction, ChargingActionGoal, ChargingGoal
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from zetabot_main.srv import ModuleControllerSrv
 from std_srvs.srv import Empty
-import scheduler.msg
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
 
@@ -118,58 +118,58 @@ def batterty_callback(data):
     if int(data.data) > 1100 and cur_mode == 'charging' :
         charging_cancel_pub.publish(True)
 
-# def charging_client():
-#     global cur_mode
-#     global charging_result
-#     if cur_mode == 'air_condition':
-#         cur_mode = 'charging'
-#         cancel_mod_pub('air_cleaning')
-#     elif cur_mode == 'full_coverage':
-#         cur_mode = 'charging'
-#         cancel_mod_pub('floor_cleaning')
-#     elif cur_mode == 'rest':
-#         cur_mode = 'charging'
+def charging_client():
+    global cur_mode
+    global charging_result
+    if cur_mode == 'air_condition':
+        cur_mode = 'charging'
+        cancel_mod_pub('air_cleaning')
+    elif cur_mode == 'full_coverage':
+        cur_mode = 'charging'
+        cancel_mod_pub('floor_cleaning')
+    elif cur_mode == 'rest':
+        cur_mode = 'charging'
 
 
-#     # Creates the SimpleActionClient, passing the type of the action
-#     # (chargingAction) to the constructor.
-#     client = actionlib.SimpleActionClient('charging_act', ChargingAction)
-#     # Waits until the action server has started up and started
-#     # listening for goals.
-#     print ('wait for charging_server')
-#     client.wait_for_server()
-#     print ('wait for charging_server111')
-#     # Creates a goal to send to the action server.
-#     goal = ChargingGoal()
+    # Creates the SimpleActionClient, passing the type of the action
+    # (chargingAction) to the constructor.
+    client = actionlib.SimpleActionClient('charging_act', ChargingAction)
+    # Waits until the action server has started up and started
+    # listening for goals.
+    print ('wait for charging_server')
+    client.wait_for_server()
+    print ('wait for charging_server111')
+    # Creates a goal to send to the action server.
+    goal = ChargingGoal()
 
-#     # Sends the goal to the action server.
-#     robot_mode_pub.publish("charging")
-#     client.send_goal(goal)
+    # Sends the goal to the action server.
+    robot_mode_pub.publish("charging")
+    client.send_goal(goal)
 
-#     # Waits for the server to finish performing the action.
-#     print ('wait for charging_server22')
-#     client.wait_for_result()
+    # Waits for the server to finish performing the action.
+    print ('wait for charging_server22')
+    client.wait_for_result()
    
-#     # Prints out the result of executing the action
-#     #charging end operat
-#     charging_result = client.get_result().result
-#     move_vel = MoveMsgs()
-#     move_vel.header.frame_id = 'charging'
-#     move_vel.linear_x = 0.03
-#     move_vel.angular_z = 0.00
+    # Prints out the result of executing the action
+    #charging end operat
+    charging_result = client.get_result().result
+    move_vel = MoveMsgs()
+    move_vel.header.frame_id = 'charging'
+    move_vel.linear_x = 0.03
+    move_vel.angular_z = 0.00
 
-#     move_vel_pub.publish(move_vel)
+    move_vel_pub.publish(move_vel)
 
-#     rospy.sleep(5)
+    rospy.sleep(5)
 
-#     move_vel.header.frame_id = 'charging'
-#     move_vel.linear_x = 0.00
-#     move_vel.angular_z = 0.00
+    move_vel.header.frame_id = 'charging'
+    move_vel.linear_x = 0.00
+    move_vel.angular_z = 0.00
 
-#     move_vel_pub.publish(move_vel)
+    move_vel_pub.publish(move_vel)
 
-#     cur_mode = 'rest'
-#     return  charging_result # A chargingResult
+    cur_mode = 'rest'
+    return  charging_result # A chargingResult
 
 def air_cleaning_client():
     global cur_mode
@@ -406,9 +406,9 @@ if __name__ == '__main__':
     rospy.init_node('robot_schedule')
     rospy.Subscriber("battery",String, batterty_callback)
 
-    scheduler = Scheduler()
+    # scheduler = Scheduler()
 
-    module_controller_srv("air_lv2_on")
+    # module_controller_srv("air_lv2_on")
 
     # scheduler.scheduler('cron', "floor_cleaning")
 
@@ -421,12 +421,14 @@ if __name__ == '__main__':
 
     # scheduler.scheduler('cron', "charging_cancel")
 
-    scheduler.scheduler('interval', "air_condition")
+    # scheduler.scheduler('interval', "air_condition")
 
-    count = 0
-    while True:
-        # print "Running main process..............."
-        rospy.sleep(1)
-        count += 1
-        #scheduler.kill_scheduler("1")
-        # print "######### kill cron schedule ##########"
+    charging_client()
+
+    # count = 0
+    # while True:
+    #     # print "Running main process..............."
+    #     rospy.sleep(1)
+    #     count += 1
+    #     #scheduler.kill_scheduler("1")
+    #     # print "######### kill cron schedule ##########"
