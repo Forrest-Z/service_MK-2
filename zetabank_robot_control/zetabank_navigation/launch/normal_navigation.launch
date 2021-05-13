@@ -29,7 +29,9 @@
     <remap from="odom" to="$(arg odom_topic)"/>
   </node>
 
-  <!-- <node pkg="robot_pose_publisher" type="robot_pose_publisher" name="robot_pose_publisher"/> -->
+  <node pkg="robot_pose_publisher" type="robot_pose_publisher" name="robot_pose_publisher"/>
+
+  <node pkg="zetabot_main" type="turn" name="turn_srv"/>
 <!-- 
   <node pkg="autonomous_navigation" type="initializeAMCLParticles" name="AMCL_particles"/> -->
 
