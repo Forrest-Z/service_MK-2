@@ -63,8 +63,7 @@ class Schedule :
                         test_func()
                         pre_time = time.localtime(time.time()).tm_sec
                         time.sleep(0.3)
-                
-    
+
     def schedule_info(self) :
         None
 
