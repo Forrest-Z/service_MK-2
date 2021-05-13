@@ -285,8 +285,8 @@ void WheelControl(int* publish_rate)
                 // ==============================================
                 mdr_mc.GetMotorPosition(&lm_pos, &rm_pos);
 
-                left_motor_vel = rpm2MPS(lm_vel);
-                right_motor_vel = rpm2MPS(rm_vel);
+                left_motor_vel = -1*(rpm2MPS(lm_vel));
+                right_motor_vel = -1*(rpm2MPS(rm_vel));
                 left_motor_pos = pulse2MPS(lm_pos);
                 right_motor_pos = pulse2MPS(rm_pos);
 
