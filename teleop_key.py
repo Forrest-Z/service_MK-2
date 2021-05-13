@@ -69,8 +69,8 @@ def vels(target_linear_vel, target_angular_vel):
 
 def roming_thd_call_back():
     global roming_flag
-    roming_vel = 0.3
-    during = 5
+    roming_vel = 0.1
+    during = 3
     rate = 0.02
 
     while True :
@@ -83,6 +83,8 @@ def roming_thd_call_back():
             twist.linear.x = control_linear_vel; twist.linear.y = 0; twist.linear.z = 0
             twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = control_angular_vel
             while time.time() - now <= during :
+                if not roming_flag :
+                    break
                 pub.publish(twist)
                 rospy.sleep(rate)
         rospy.sleep(0.1)
@@ -155,6 +157,10 @@ if __name__=="__main__":
 
             elif key == 'r' :
                 roming_flag = not(roming_flag)
+                if roming_flag : 
+                    print("roming On")
+                else :
+                    print("roming Off")
 
             elif status == 14 :
                 print msg
