@@ -1,10 +1,2 @@
-bool C_12V_01
-bool C_12V_02  
-bool C_12V_03  
-bool C_12V_04  
-bool C_12V_05  
-bool C_12V_06  
-bool C_12V_07  
-bool NUC_EN    
-bool USB_HUB_EN
-bool BATT_MOTOR
+int16 port
+bool state
