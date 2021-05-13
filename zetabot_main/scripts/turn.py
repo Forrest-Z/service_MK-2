@@ -137,7 +137,7 @@ def main():
 
     rospy.sleep(1)
 
-    srv = rospy.Service('turn', TurnSrv, turn)
+    srv = rospy.Service('/turn', TurnSrv, turn)
 
     print("turn_ready")
 
