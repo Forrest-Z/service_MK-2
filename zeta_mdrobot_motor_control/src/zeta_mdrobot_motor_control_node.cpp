@@ -27,7 +27,7 @@
 
 #include "zeta_mdrobot_motor_control/mdrobot_motor_control.hpp"
 
-#define CONTROL_MOTOR_SPEED_PERIOD      (1000/10)     //10hz. 100ms
+#define CONTROL_MOTOR_SPEED_PERIOD      (1000/25)     //25hz. 40ms
 #define DRIVE_INFO_PUBLISH_PERIOD       (1000/25)     //25hz. 40ms
 
 #define DEBUG_BASIC
