@@ -180,8 +180,16 @@ def status_led(num):
         f_led_color = Led.Color.yellow
         b_led_mode = Led.Mode.stay
         b_led_color = Led.Color.stay
+
+    elif num == 0 :
+        print("ledtest_off")
+        command = "ledtest_off"
+        module_controller_srv(command)
+        return 0
     
-    led_controll(f_led_mode,b_led_mode,f_led_color,b_led_color)
+    command = "ledtest" + "_" + str(f_led_mode) + "_" + str(b_led_mode) + "_" +  str(f_led_color) + "_" +  str(b_led_color)
+
+    module_controller_srv(command)
 
 if __name__=="__main__":
     settings = termios.tcgetattr(sys.stdin)
@@ -198,6 +206,7 @@ if __name__=="__main__":
     control_linear_vel = 0
     control_angular_vel = 0
     pump_power = False
+    uvc_power = False
     pulifier_level = 0
     pulifier_command = 'air_lv1'
 
@@ -252,7 +261,17 @@ if __name__=="__main__":
             #         print 'pump_off'
             #         module_controller_srv("pump_off")
             
-            elif key in list(map(str,range(1,10))):
+            elif key == 'u' :
+                status = status + 1
+                uvc_power = not(uvc_power)
+                if uvc_power :
+                    print 'uvc_on'
+                    module_controller_srv("uvc_on")
+                else :
+                    print 'uvc_off'
+                    module_controller_srv("uvc_off")
+
+            elif key in list(map(str,range(0,10))):
                 status = status + 1
                 print 'led_mode_' + str(key)
                 status_led(int(key))
