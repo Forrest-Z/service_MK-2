@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import rospy
-import os
+import os,sys
 
 from std_msgs.msg import String
 from std_msgs.msg import UInt8,UInt16, UInt64
@@ -62,7 +62,8 @@ class Led :
         stay = 0xff
  
 
-class RobotStatus:
+
+class led_controller() :
     battery_low_margin = 25
     battery_midle_margin = 80
     battery_full_margin = 97
@@ -75,157 +76,23 @@ class RobotStatus:
     battery_high_flag = False
     battery_full_flag = False
 
-    def __init__(self):
+
+    def __init__(self) :
         self.battery_sub = RosMaker("sub","/battery",UInt16)
         self.emergency_sub = RosMaker("sub","/emergency_stop",String)
         self.mode_sub = RosMaker("sub","/robot_mode",String)
         self.charging_sub = RosMaker("sub","/charging",Bool)
         self.speak_sub = RosMaker("sub","/speak",Bool)
 
-        self.battery_level_pub = RosMaker("pub","/battery_level",UInt8)
-        self.led_command_pub = RosMaker("pub","/led_command",UInt64)
-        
-        self.battery_set_flag = False
-        self.led_count = 1000
-        self.led_color = "blue"
-        self.blink_flag = False
-        self.warring_flag = False
-        self.stop_flag = False
-        self.charging_flag = False
-        self.mode_led_flag = ""
-
-    def status_led(self):
-
-        #1.charging
-        #2.ultra_sonic
-        #3.battery
-        #4.mode
-
-        try:
-            emergency_msg = self.emergency_sub.msg.data
-            robot_mode_msg = self.mode_sub.msg.data
-            battery_level = self.battery_level
-            charging_msg = self.charging_sub.msg.data
-            hysteresis_term = 3
-
-            os.system("clear")
-
-            print("ready",self.battery_level)
-
-            if emergency_msg == "" :
-                self.warring_flag = False
-                self.stop_flag = False
-            if robot_mode_msg == "" :
-                self.mode_led_flag = ""
-            if charging_msg == False :
-                self.charging_flag  = False
-
-            print("ready",battery_level)
-            print("charging_msg", charging_msg)
-            print("emergency_msg", emergency_msg)
-            print("battery_level", battery_level)
-            print("robot_mode_msg", robot_mode_msg)
-
-            # if battery_level <= self.battery_low_margin-self.battery_hysteresis :
-            #     battery_low_flag = True
-            # elif battery_level >= self.battery_low_margin+self.battery_hysteresis :
-            #     battery_low_flag = False                
-
-            # if "charging" in robot_mode_msg : 
-            #     if battery_low_flag :
-            #         print("battery_low_charging")
-            #         self.led_command_pub.publish(1)
-            #         print("battery_low_charging")
-            #     elif self.battery_low_margin + self.battery_hysteresis <= battery_level < self.battery_midle_margin - self.battery_hysteresis :
-            #         self.led_command_pub.publish(2)
-            #         print("battery_midle_charging")
-            #     elif self.battery_midle_margin + self.battery_hysteresis <= battery_level < self.battery_full_margin - self.battery_hysteresis :
-            #         self.led_command_pub.publish(3)
-            #         print("battery_high_charging")
-            #     elif self.battery_full_margin <= battery_level :
-            #         self.led_command_pub.publish(4)
-            #         print("battery_max_charging")
-
-            if not("charging" in robot_mode_msg) :
-                self.battery_hysteresis_low = 0
-                self.battery_hysteresis_midle = 0
-                self.battery_hysteresis_high = 0
-
-            if "charging" in robot_mode_msg :
-                if battery_level <= self.battery_low_margin - self.battery_hysteresis_low :
-                    print("battery_low_charging")
-                    self.led_command_pub.publish(1)
-                    self.battery_hysteresis_low = hysteresis_term
-                    self.battery_low_flag = True
-                elif self.battery_low_margin + self.battery_hysteresis_low <= battery_level < self.battery_midle_margin - self.battery_hysteresis_midle :
-                    print("battery_midle_charging")
-                    self.led_command_pub.publish(2)
-                    self.battery_hysteresis_low = 0
-                    self.battery_hysteresis_midle = hysteresis_term
-                    self.battery_low_flag = False
-                elif self.battery_midle_margin + self.battery_hysteresis_midle <= battery_level < self.battery_full_margin - self.battery_hysteresis_high :                
-                    print("battery_high_charging")
-                    self.led_command_pub.publish(3)
-                    self.battery_hysteresis_midle = 0
-                    self.battery_hysteresis_high = hysteresis_term
-                elif self.battery_full_margin <= battery_level :
-                    print("battery_max_charging")
-                    self.led_command_pub.publish(4)
-
-
-            elif emergency_msg != "" and robot_mode_msg != "charge_search" :
-                print("emergency_msg")
-                if "stop" in emergency_msg :
-                    self.led_command_pub.publish(5)
-                    print("robot_stop")
-                elif "warning" in emergency_msg :
-                    self.led_command_pub.publish(6)
-                    print("robot_warning")
-
-            elif self.battery_low_flag:
-                self.led_command_pub.publish(7)
-                print("battery_low")
-            
-            elif robot_mode_msg != "" :
-                if "full_coverage" in robot_mode_msg :
-                    self.led_command_pub.publish(8)
-                    print("full_coverage_mode")
-                elif "air_condition" in robot_mode_msg :
-                    self.led_command_pub.publish(9)
-                    print("air_conditioning_mode")
-
-        except:
-            pass
-
-        
-
-    def battery_level_publisher(self):
-        battery_min_margin = 200
-        battery_max_margin = 900
-
-        if self.battery_sub.msg.data != None:
-            print(self.battery_sub.msg.data)
-            self.battery_level = int(float(float(self.battery_sub.msg.data-battery_min_margin) / battery_max_margin) * 100)
-            # print("battery_level_data : ",self.battery_level)
-            print(self.battery_level)
-            self.battery_level_pub.publish(self.battery_level)
-            
-
-class led_controller(RobotStatus) :
-
-
-
-    def __init__(self) :
-        RobotStatus.__init__(self)
         self.led_pub = RosMaker("pub","/led_command",UInt64)
+
+        self.module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
+
 
         self.cur_robot_mode = ''
 
         self.f_color_ = 0x000000
         self.b_color_ = 0x000000
-
-        
-        
 
     def led_custom(self,f_mode,f_red,f_green,f_blue,b_mode,b_red,b_green,b_blue) :
         command = 0
@@ -383,10 +250,11 @@ class led_controller(RobotStatus) :
             print("robot_mode : ", self.mode_sub.msg.data)
             print("cur_robot_mode : ", self.cur_robot_mode)
             print("emergency_sub : ", self.emergency_sub.msg.data)
-            print("battery_level : ", self.battery_level)
             
 
-            self.led_controll(f_led_mode,b_led_mode,f_led_color,b_led_color)
+            command = "led" + "_" + str(f_led_mode) + "_" + str(b_led_mode) + "_" +  str(f_led_color) + "_" +  str(b_led_color)
+
+            self.module_controller_srv(command)
         except :
             pass
         
@@ -398,14 +266,16 @@ battery_status = led_controller()
 # battery_level_pub = battery_status.battery_level_publisher()
 
 
-while(rospy.is_shutdown) :
-    battery_status.battery_level_publisher()
-    battery_status.status_led()
-    # print(battery_level)
-    rospy.sleep(0.5)
+try:
+    while(rospy.is_shutdown) :
+        battery_status.status_led()
+        # print(battery_level)
+        rospy.sleep(0.5)
 
-rospy.spin()  
-
+    rospy.spin()  
+except KeyboardInterrupt :
+    print("exit")
+    sys.exit()
 
 # def battery_level_status(battery_level):
     
