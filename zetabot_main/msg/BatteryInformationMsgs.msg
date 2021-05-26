@@ -1,3 +1,4 @@
+int16 id
 float32 voltage
 float32 current
 uint16 status
