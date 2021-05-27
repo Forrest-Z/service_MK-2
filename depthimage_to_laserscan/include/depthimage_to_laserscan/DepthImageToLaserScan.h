@@ -180,7 +180,7 @@ namespace depthimage_to_laserscan
       const T* depth_row = reinterpret_cast<const T*>(&depth_msg->data[0]);
       const int row_step = depth_msg->step / sizeof(T);
       //gwon
-      const int offset =50;//(int)(center_y - scan_height/2);
+      const int offset =150;//(int)(center_y - scan_height/2);
       depth_row += offset*row_step; // Offset to center of image
 
       for(int v = offset; v < offset+scan_height_; ++v, depth_row += row_step){
