@@ -16,7 +16,7 @@ from threading import Thread
 # module_controller_srv("uvc_on,led_off,led_green,air_lv2,air_off")
 #-------------------------------------------------
 
-purifier_topic = "/purifier_command"
+purifier_topic = "/purifier_control_command"
 uvc_control_topic = "/uvc_control_command"
 led_topic = "/led_control_command"
 
