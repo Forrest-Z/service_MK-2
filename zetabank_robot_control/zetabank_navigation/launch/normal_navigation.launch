@@ -2,7 +2,10 @@
 
 
   <!-- Map server -->
-    <arg name="map_file" default="$(find zetabank_navigation)/maps/office2.yaml"/>
+    <arg name="map_file" default="$(find zetabank_navigation)/maps/gong0514.yaml"/>
+    <!-- <arg name="map_file" default="$(find tracking_pid)/maps/grid.yaml"/> -->
+
+    
     <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)">
   </node>
 
@@ -31,7 +34,7 @@
 
   <node pkg="robot_pose_publisher" type="robot_pose_publisher" name="robot_pose_publisher"/>
 
-  <node pkg="zetabot_main" type="turn" name="turn_srv"/>
+  <node pkg="zetabot_main" type="turn.py" name="turn_srv"/>
 <!-- 
   <node pkg="autonomous_navigation" type="initializeAMCLParticles" name="AMCL_particles"/> -->
 
