@@ -21,6 +21,7 @@ from zetabot_main.srv import ModuleControllerSrv, TurnSrv
 from std_srvs.srv import Empty
 import scheduler.msg
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import Twist
 from socket import *
 
 print("import")
@@ -36,7 +37,7 @@ cancle_result = ['cancel_air_condition_mode','cancel_fulcoverage','cancel_chargi
 air_cancel_pub = rospy.Publisher('air_condition_cancel', Bool, queue_size=10)
 floor_cancel_pub = rospy.Publisher('floor_cleaning_cancel', Bool, queue_size=10)
 charging_cancel_pub = rospy.Publisher('charging_cancel', Bool, queue_size=10)
-move_vel_pub = rospy.Publisher('/move_vel',MoveMsgs,queue_size=10)
+cmd_vel_pub = rospy.Publisher('/cmd_vel',Twist,queue_size=10)
 robot_mode_pub = rospy.Publisher('/robot_mode',String,queue_size=10)
 power_ctl_pub =  rospy.Publisher('power_ctl', String, queue_size=10)
 emergency_stop_pub = rospy.Publisher('/move_base_stop',Bool,queue_size=10)
@@ -235,20 +236,18 @@ def charging_client():
 #     # Prints out the result of executing the action
 #     #charging end operat
 #     charging_result = client.get_result().result
-#     move_vel = MoveMsgs()
-#     move_vel.header.frame_id = 'charging'
-#     move_vel.linear_x = 0.03
-#     move_vel.angular_z = 0.00
+    # cmd_vel = Twist()
+    # cmd_vel.linear.x = 0.03
+    # cmd_vel.angular.z = 0.00
 
-#     move_vel_pub.publish(move_vel)
+    # cmd_vel_pub.publish(cmd_vel)
 
-#     rospy.sleep(5)
+    # rospy.sleep(5)
 
-#     move_vel.header.frame_id = 'charging'
-#     move_vel.linear_x = 0.00
-#     move_vel.angular_z = 0.00
+    # cmd_vel.linear.x = 0.00
+    # cmd_vel.angular.z = 0.00
 
-#     move_vel_pub.publish(move_vel)
+    # cmd_vel_pub.publish(cmd_vel)
 
 #     cur_mode = 'rest'
 #     return  charging_result # A chargingResult

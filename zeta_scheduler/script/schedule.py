@@ -4,8 +4,8 @@ import rospy
 import os
 
 import actionlib
-# from apscheduler.jobstores.base import JobLookupError
-# from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.base import JobLookupError
+from apscheduler.schedulers.background import BackgroundScheduler
 import time
 from std_msgs.msg import Bool
 from std_msgs.msg import String
@@ -18,6 +18,8 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from zetabot_main.srv import ModuleControllerSrv
 from std_srvs.srv import Empty
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import Twist
+
 
 
 cur_mode = 'rest'
@@ -30,7 +32,7 @@ cancle_result = ['cancel_air_condition_mode','cancel_fulcoverage','cancel_chargi
 air_cancel_pub = rospy.Publisher('air_condition_cancel', Bool, queue_size=10)
 floor_cancel_pub = rospy.Publisher('floor_cleaning_cancel', Bool, queue_size=10)
 charging_cancel_pub = rospy.Publisher('charging_cancel', Bool, queue_size=10)
-move_vel_pub = rospy.Publisher('/move_vel',MoveMsgs,queue_size=10)
+cmd_vel_pub = rospy.Publisher('/cmd_vel',Twist,queue_size=10)
 robot_mode_pub = rospy.Publisher('/robot_mode',String,queue_size=10)
 power_ctl_pub =  rospy.Publisher('power_ctl', String, queue_size=10)
 
@@ -153,20 +155,18 @@ def charging_client():
     # Prints out the result of executing the action
     #charging end operat
     charging_result = client.get_result().result
-    move_vel = MoveMsgs()
-    move_vel.header.frame_id = 'charging'
-    move_vel.linear_x = 0.03
-    move_vel.angular_z = 0.00
+    cmd_vel = Twist()
+    cmd_vel.linear.x = 0.03
+    cmd_vel.angular.z = 0.00
 
-    move_vel_pub.publish(move_vel)
+    cmd_vel_pub.publish(cmd_vel)
 
     rospy.sleep(5)
 
-    move_vel.header.frame_id = 'charging'
-    move_vel.linear_x = 0.00
-    move_vel.angular_z = 0.00
+    cmd_vel.linear.x = 0.00
+    cmd_vel.angular.z = 0.00
 
-    move_vel_pub.publish(move_vel)
+    cmd_vel_pub.publish(cmd_vel)
 
     cur_mode = 'rest'
     return  charging_result # A chargingResult
@@ -406,7 +406,7 @@ if __name__ == '__main__':
     rospy.init_node('robot_schedule')
     rospy.Subscriber("battery",String, batterty_callback)
 
-    # scheduler = Scheduler()
+    scheduler = Scheduler()
 
     # module_controller_srv("air_lv2_on")
 
