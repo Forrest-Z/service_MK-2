@@ -6,6 +6,8 @@ roscore
 roslaunch zetabank_bringup zetabank_robot.launch
 
 
+rosrun zetabot_main battery_log.py
+
 rosrun zetabot_main module_controller.py
 
 
@@ -33,6 +35,14 @@ Terminal3 Launch Start (auto_run & darknet)
 python client_socket.py
 
 python darknet_depthCenter_rgb_stream.py
+
+
+
+auto controll
+-------------------------------------------------------------------------------------
+rosrun zetabot_main robot_status_for_service.py
+rosrun zetabot_main turn.py
+
 
 
 manual controll
