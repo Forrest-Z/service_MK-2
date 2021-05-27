@@ -372,7 +372,7 @@ if __name__ == '__main__':
     except rospy.ROSInterruptException:
         rospy.loginfo("Navigation test finished.")
 
-    fname = '/home/zetabank/catkin_ws/src/full_coverage/scripts/map/map_913c_4.pgm'
+    fname = '/home/zetabank/catkin_ws/src/full_coverage/scripts/map/gong_full0517.pgm'
 
     original = cv2.imread(fname, cv2.IMREAD_COLOR)
 

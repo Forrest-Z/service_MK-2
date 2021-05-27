@@ -106,8 +106,8 @@ def create_celljson():
 
     create_map['map'] = json_dict
     print ("///////////////////////////////////////////////////////" + str(create_map) )
-    dbsrv = rospy.ServiceProxy('db_works', Dbsrv)
-    resp1 = dbsrv("create_map",str(create_map))
+    # dbsrv = rospy.ServiceProxy('db_works', Dbsrv)
+    # resp1 = dbsrv("create_map",str(create_map))
 
     print(json_dict)
     file_path = os.path.dirname(os.path.abspath(__file__)) + "/map/cell_info.json"
@@ -327,7 +327,7 @@ if __name__ == '__main__':
     except rospy.ROSInterruptException:
         rospy.loginfo("Navigation test finished.")
 
-    fname = '/home/zetabank/catkin_ws/src/full_coverage/scripts/map/map_913c_3.pgm'
+    fname = '/home/zetabank/catkin_ws/src/full_coverage/scripts/map/gong_air_0517.pgm'
 
     original = cv2.imread(fname, cv2.IMREAD_COLOR)
 
@@ -445,11 +445,9 @@ if __name__ == '__main__':
     cv2.imshow('Original', original)
     # cv2.waitKey(0)
     # os.system('cd {}'.format(os.getcowd())))
-    cmd = 'java -jar /home/zetabank/catkin_ws/src/full_coverage/scripts/test.jar ' + str(arrh) + ' ' + str(
-        arrw) + ' ' + s_arr
+    cmd = 'java -jar /home/zetabank/catkin_ws/src/full_coverage/scripts/test.jar ' + str(arrh) + ' ' + str(arrw) + ' ' + s_arr
     output = os.popen(cmd).read()
     # print(output)
-
     jsontxt = output
     pkt = json.loads(re.sub('"', '', jsontxt))
     '''
