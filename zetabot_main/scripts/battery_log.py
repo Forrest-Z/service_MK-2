@@ -1,8 +1,9 @@
+
 #! /usr/bin/env python
 
 import rospy
 
-import pygame
+import csv
 import time
 import sys, tty, select, termios, os
 from zetabot_main.msg import BatteryInformationMsgs
@@ -25,76 +26,62 @@ def main():
 
     batt1_sub = rospy.Subscriber("/battery1",BatteryInformationMsgs,battery1_callback)
     batt1_sub = rospy.Subscriber("/battery2",BatteryInformationMsgs,battery2_callback)
+    today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
+
+    minit = 99
+
     rospy.sleep(1)
+
+    file_name = "/home/zetabank/robot_log/battery_log/batt_log_"+today+".csv"
+
+
+    if os.path.isfile(file_name):
+        print('ok')
+    else :
+        f = open(file_name,'w')
+        wr = csv.writer(f)
+        log_name = ['Time'] + [j + i for i in BatteryInformationMsgs.__slots__  for j in ['BAT1_','BAT2_']]
+        wr.writerow(log_name)
+        f.close()
+
+    rospy.sleep(1)
+
+
+    
     try :
         while True :
-            
-            rospy.sleep(1)
-            if battery1.voltage >= 25.0 and battery2.voltage >=25.0 :
-                """
-                if time.localtime(time.time()).tm_min % 30 == 0 :
-    
-                    log = open('/home/zetabank/batt_log_210506.txt', mode='aw')
-                    log.write("\n")
-                    log.write("time : " + str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min) + "\n")
-                    log.write("*"*20 + "\n")
-                    log.write("-"*10 + "battery1" + "-"*10 + "\n")
-                    log.write(str(battery1) + "\n")
-                    log.write("-"*20 + "\n")
-                    log.write("-"*10 + "battery2" + "-"*10 + "\n")
-                    log.write(str(battery2) + "\n")
-                    log.write("*"*20 + "\n")
-                    log.write('' + "\n")
-                    log.close()
-                    print("")
-                    print("time : " + str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min) + "")
-                    print("*"*20 + "")
-                    print("-"*10 + "battery1" + "-"*10 + "")
-                    print(str(battery1) + "")
-                    print("-"*20 + "")
-                    print("-"*10 + "battery2" + "-"*10 + "")
-                    print(str(battery2) + "")
-                    print("*"*20 + "")
-                    print('' + "")
-                    while time.localtime(time.time()).tm_min % 30 == 0 :
-                        rospy.sleep(1)
-                """
-            else :
-                if time.localtime(time.time()).tm_min % 10 == 0 :
-    
-                    log = open('/home/zetabank/batt_log_210506.txt', mode='aw')
-                    log.write("lower 24v\n")
-                    log.write("time : " + str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min) + "\n")
-                    log.write("*"*20 + "\n")
-                    log.write("-"*10 + "battery1" + "-"*10 + "\n")
-                    log.write(str(battery1) + "\n")
-                    log.write("-"*20 + "\n")
-                    log.write("-"*10 + "battery2" + "-"*10 + "\n")
-                    log.write(str(battery2) + "\n")
-                    log.write("*"*20 + "\n")
-                    log.write('' + "\n")
-                    log.close()
-                    print("lower 24v")
-                    print("time : " + str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min) + "")
-                    print("*"*20 + "")
-                    print("-"*10 + "battery1" + "-"*10 + "")
-                    print(str(battery1) + "")
-                    print("-"*20 + "")
-                    print("-"*10 + "battery2" + "-"*10 + "")
-                    print(str(battery2) + "")
-                    print("*"*20 + "")
-                    print('' + "")
-                    while time.localtime(time.time()).tm_min % 10 == 0 :
-                        rospy.sleep(1)
+
+
+            while time.localtime(time.time()).tm_min == minit :
+                    rospy.sleep(2)
+
+            f = open(file_name,'a')
+            wr = csv.writer(f)
+            log_name = ['Time'] + [j + i for i in BatteryInformationMsgs.__slots__  for j in ['BAT1_','BAT2_']]
+
+
+            now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+
+            log = [now_time]
+            for i in range(len(battery1.__getstate__())) :
+                log.append(battery1.__getstate__()[i])
+                log.append(battery2.__getstate__()[i])
+
+
+            wr.writerow(log)
+            f.close()
+            print(log)
+
+            minit = time.localtime(time.time()).tm_min
+
 
 
     except KeyboardInterrupt :
         print("exit")
         sys.exit()
 
-    rospy.spin
 
-
+    rospy.spin()
 
         # except Exception:
         #     print("unknown error")
