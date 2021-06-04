@@ -14,7 +14,7 @@ from zetabot_main.msg import ScheduleAirAction, ScheduleAirGoal
 from zetabot_main.msg import ScheduleFullcoverageAction, ScheduleFullcoverageGoal
 from zetabot_main.msg import ChargingAction,ChargingActionGoal,ChargingFeedback,ChargingActionResult, ChargingGoal
 # from autocharge.msg import ChargingAction, ChargingActionGoal, ChargingGoal
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
 from zetabot_main.srv import ModuleControllerSrv
 from std_srvs.srv import Empty
 from geometry_msgs.msg import PoseWithCovarianceStamped
@@ -37,6 +37,10 @@ robot_mode_pub = rospy.Publisher('/robot_mode',String,queue_size=10)
 power_ctl_pub =  rospy.Publisher('power_ctl', String, queue_size=10)
 
 module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
+
+#gwon
+move_base_result_status = None
+
 
 def initial_pos_pub():
     publisher = rospy.Publisher('initialpose', PoseWithCovarianceStamped, queue_size=10)
@@ -262,6 +266,11 @@ def movebase_client(x,y,z=1):
     else:
         return client.get_result()
 
+def recv_move_base_result(msg) :
+    global move_base_result_status
+
+    move_base_result_status = msg.status.status
+
 class Scheduler(object):
     def __init__(self):
         self.sched = BackgroundScheduler()
@@ -348,6 +357,9 @@ class Scheduler(object):
         
     def roming_move(self,type, job_id) :
         global cur_mode
+        global move_base_result_status
+        cnt = 0
+
         if cur_mode == 'rest' or cur_mode == 'air_condition':
             print("call_back")
             # roming_list = [  
@@ -356,20 +368,46 @@ class Scheduler(object):
             #     {"x" : 2.8, "y" : 1.46 },
             #     {"x" : 3.15, "y" : -2.6 }
             #     ] ###gwang ju 
-            
+        
             roming_list = [
-                {"x" : 0.42, "y" : -1.74 },
-                {"x" : 4.35, "y" : 0.023 },
-                {"x" : 3.316, "y" : 2.301 },
-                {"x" : 0.66, "y" : -0.66 }
-                ] #hub
+                {"x" : 1.065, "y" : -6.951 },
+                {"x" : 0.664, "y" : -1.181 },
+                {"x" : 0.1071, "y" : 3.088 },
+                {"x" : 0.270, "y" : 5.148 }
+                ] #hub(sang_cafe)
 
             robot_mode_pub.publish("air_condition")           
             result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
             
+        if cur_mode == 'rest' :
+            cur_mode = 'air_condition'
+            robot_mode_pub.publish("air_condition")
+
+
+        while cur_mode == 'air_condition' :
+            print("call_back")
+
+            result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
+
+            rospy.sleep(1)
+            print("done")
+
+            print("result : " + str(move_base_result_status))
+
+            if int(move_base_result_status) == 3 :
+                cnt = 0
+
+            else :
+                cnt += 1
+                if cnt >= 3 :
+                    None
+                else :
+                    continue
+                
             self.index += 1
-            if self.index >= 4 :
+            if self.index >= len(roming_list) :
                 self.index = 0
+        module_controller_srv("uvc_off,air_off")
 
     def go_home(self,type,job_id) :
         robot_mode_pub.publish("charging")
@@ -406,9 +444,10 @@ if __name__ == '__main__':
     rospy.init_node('robot_schedule')
     rospy.Subscriber("battery",String, batterty_callback)
 
+    rospy.Subscriber("/move_base/result", MoveBaseActionResult, recv_move_base_result)
+
     scheduler = Scheduler()
 
-    # module_controller_srv("air_lv2_on")
 
     # scheduler.scheduler('cron', "floor_cleaning")
 
@@ -423,7 +462,11 @@ if __name__ == '__main__':
 
     # scheduler.scheduler('interval', "air_condition")
 
-    charging_client()
+    module_controller_srv("uvc_on,air_lv3")
+
+
+    scheduler.roming_move("a","a")
+    # charging_client()
 
     # count = 0
     # while True:
