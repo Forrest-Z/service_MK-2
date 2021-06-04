@@ -6,9 +6,16 @@ import csv
 import time
 import sys, tty, select, termios, os
 from zetabot_main.msg import BatteryInformationMsgs
+from std_msgs.msg import Float32
 battery1 = BatteryInformationMsgs()
 battery2 = BatteryInformationMsgs()
+
+battery_cnt = 2
+
 log_directory = "/home/zetabank/robot_log/battery_log"
+
+battery_SOC_pub = rospy.Publisher("/battery_SOC",Float32,queue_size=10)
+
 def battery_callback(msg) :
     global battery1
     global battery2
@@ -17,6 +24,9 @@ def battery_callback(msg) :
     else :
         battery2 = msg
 
+    battery_SOC = (battery1.SOC + battery2.SOC) / battery_cnt
+
+    battery_SOC_pub.publish(battery_SOC)
 
 def main():
 
