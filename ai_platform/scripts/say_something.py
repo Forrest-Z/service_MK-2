@@ -6,6 +6,7 @@ import pygame
 import time
 import sys, tty, select, termios, os
 
+from std_msgs.msg import Bool
 from darknet_ros_msgs.msg import BoundingBoxesCenter
 
 from indy_utils import indydcp_client as client
@@ -17,7 +18,7 @@ import numpy as np
 robot_ip = "192.168.0.6"  # Robot (Indy) IP
 robot_name = "NRMK-Indy7"  # Robot name (Indy7)
 
-indy = client.IndyDCPClient(robot_ip, robot_name)
+#indy = client.IndyDCPClient(robot_ip, robot_name)
 file_dir = os.path.dirname(__file__)
 
 rospy.init_node("say_something")
@@ -54,10 +55,8 @@ class SaySomething(object) :
         self.bgm1 = file_dir + '/sound/bgm.mp3'
         self.bgm2 = file_dir + '/sound/bgm2.mp3'
 
-        self.sijang_1 = file_dir + '/sound/sijang_chungjung.mp3'
-        self.sijang_2 = file_dir + '/sound/sijang_mask.mp3'
-        self.sijang_3 = file_dir + '/sound/sijang_hello.mp3'
-        self.sijang_5 = file_dir + '/sound/sijang_five_people.mp3'
+        self.sound_1 = file_dir + '/sound/prevention.mp3'
+        self.sound_2 = file_dir + '/sound/mask.mp3'
 
 
         self.hello_flag = False
@@ -75,8 +74,9 @@ class SaySomething(object) :
 
         self.settings = termios.tcgetattr(sys.stdin)
 
-        self.depth_sub = RosMaker("sub","darknet_depth",BoundingBoxesCenter,self.depthSubCallback)
+        self.depth_sub = RosMaker("sub","/darknet_depth",BoundingBoxesCenter,self.depthSubCallback)
         self.initMixer()
+	self.say_pub = RosMaker("pub","/speak",Bool)
 
         self.say_hello = None
 
@@ -89,7 +89,7 @@ class SaySomething(object) :
         key = 0
         try : 
             print("say_start")
-            while True :
+            while (rospy.is_shutdown) :
                 time.sleep(0.2)
                 # while key == 0 :
                 #     key__ = getKey()
@@ -102,11 +102,11 @@ class SaySomething(object) :
                 # elif key == 2 :
                 #     print("key22222222222")
                 #     filename = 'speech_20210218053305942.mp3'
-                if self.person_5_flag and self.person_5_done == False :
-                    os.system("mplayer "+ self.sijang_5)
+                #if self.person_5_flag and self.person_5_done == False :
+                #    os.system("mplayer "+ self.sijang_5)
 
-                    self.person_5_done = True
-                    print("person_5_done")
+                #    self.person_5_done = True
+                #    print("person_5_done")
 
 
                 if self.hello_flag and self.hello_done == False :
@@ -115,14 +115,15 @@ class SaySomething(object) :
                     # time.sleep(1)
                     
                     if self.switch_flag == 0 :
-                        os.system("mplayer "+ self.sijang_1)
+			self.speak_pub(True)
+                        os.system("mplayer "+ self.sound_1)
                         self.switch_flag = 1
+			self.speak_pub(False)
                     elif self.switch_flag == 1 :
-                        os.system("mplayer "+ self.sijang_2)
-                        self.switch_flag = 2
-                    elif self.switch_flag == 2 :
-                        os.system("mplayer "+ self.sijang_3)
+			self.speak_pub(True)
+                        os.system("mplayer "+ self.sound_2)
                         self.switch_flag = 0
+			self.speak_pub(False)
 
                     self.hello_done = True
                     print("hello_done")
