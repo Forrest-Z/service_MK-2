@@ -10,6 +10,13 @@ rosrun zetabot_main battery_log.py
 
 rosrun zetabot_main module_controller.py
 
+rosrun zetabot_main robot_status_for_service.py
+
+
+python catkin_ws/src/say_key.py
+
+rosrun zeta_scheduler schedule.py
+
 
 roslaunch depthimage_to_laserscan multi_laser.launch
 
