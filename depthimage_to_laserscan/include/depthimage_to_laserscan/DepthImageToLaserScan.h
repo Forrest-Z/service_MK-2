@@ -47,7 +47,11 @@ namespace depthimage_to_laserscan
 {
   class DepthImageToLaserScan
   {
+    
   public:
+
+    // bool maint = false;
+    // int maint_idx = 0;
     DepthImageToLaserScan();
     ~DepthImageToLaserScan();
 
@@ -205,8 +209,18 @@ namespace depthimage_to_laserscan
           if(use_point(r, scan_msg->ranges[index], scan_msg->range_min, scan_msg->range_max)){
             scan_msg->ranges[index] = r;
           }
+          // if (r <30.0){
+          //   maint = true;
+          // }
         }
       }
+      // if (maint){
+      //   scan_msg->ranges[200] = 20.0f;
+      //   maint++;
+      //   if (maint > 90 ){
+      //     maint = false;
+      //   }
+      // }
     }
 
     image_geometry::PinholeCameraModel cam_model_; ///< image_geometry helper class for managing sensor_msgs/CameraInfo messages.
