@@ -194,6 +194,9 @@ void WheelControl(int* publish_rate)
     ros::Subscriber imu_sub = node_obj.subscribe("imu", 1000, imuSensorCallback); //hong
 
     ros::Subscriber teleop_subscriber = node_obj.subscribe("teleop",10,teleOPCallback);
+
+    ros::Subscriber emergency_sub = node_obj.subscribe("emergency_stop",100,emergencyCallback);
+
 	
     odom_pub = node_obj.advertise<nav_msgs::Odometry>("odom", 50);
     
@@ -401,10 +404,31 @@ void imuSensorCallback(const sensor_msgs::Imu& imu_msg1) //hong
     }
 }
 
+void emergencyCallback(const std_msgs::String::ConstPtr& msg)
+{
+    emergency_msg = msg->data;
+}
+
 void commandVelocityCallback(const geometry_msgs::Twist & cmd_vel_msg)
 {
-    goal_velocity_from_cmd[LINEAR]  = cmd_vel_msg.linear.x;
-    goal_velocity_from_cmd[ANGULAR] = cmd_vel_msg.angular.z;
+    if (emergency_msg.find("stop") == std::string::npos)
+    {
+    	goal_velocity_from_cmd[LINEAR]  = cmd_vel_msg.linear.x;
+    	goal_velocity_from_cmd[ANGULAR] = cmd_vel_msg.angular.z;
+
+    	// if (goal_velocity_from_cmd[ANGULAR] != 0.0f && fabs(goal_velocity_from_cmd[ANGULAR]) < 0.09f ){
+    	//     goal_velocity_from_cmd[ANGULAR] = 0.09f * (goal_velocity_from_cmd[ANGULAR] / fabs(goal_velocity_from_cmd[ANGULAR]));
+    	// }
+
+    	// if (goal_velocity_from_cmd[LINEAR] != 0.0f && fabs(goal_velocity_from_cmd[LINEAR]) < 0.015f ){
+    	//     goal_velocity_from_cmd[LINEAR] = 0.015f * (goal_velocity_from_cmd[LINEAR] / fabs(goal_velocity_from_cmd[LINEAR]));
+    	// }
+    }
+    else
+    {
+        goal_velocity_from_cmd[LINEAR]  = 0;
+    	goal_velocity_from_cmd[ANGULAR] = 0;
+    }
 
     goal_velocity_from_cmd[LINEAR]  = constrain(
                                       goal_velocity_from_cmd[LINEAR],
@@ -423,6 +447,7 @@ void commandVelocityCallback(const geometry_msgs::Twist & cmd_vel_msg)
 #endif      
    
 }
+
 
 void updateGoalVelocity(void)
 {
