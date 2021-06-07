@@ -96,6 +96,9 @@ unsigned long time_now;
 unsigned long step_time;
 unsigned long prev_update_time;
 
+std::string emergency_msg = "";
+
+
 float left_motor_pos = 0.0f;
 float right_motor_pos = 0.0f;
 float left_motor_vel = 0.0f;
@@ -133,6 +136,8 @@ float constrain(float value, float min, float max);
 void commandVelocityCallback(const geometry_msgs::Twist& cmd_vel_msg);
 void imuSensorCallback(const sensor_msgs::Imu& imu_msg); //hong
 void teleOPCallback(const std_msgs::Bool& bool_msg);
+void emergencyCallback(const std_msgs::String::ConstPtr& msg);
+
 
 void WheelControl(int* publish_rate);
 void updateGoalVelocity(void);
@@ -194,6 +199,9 @@ void WheelControl(int* publish_rate)
     ros::Subscriber imu_sub = node_obj.subscribe("imu", 1000, imuSensorCallback); //hong
 
     ros::Subscriber teleop_subscriber = node_obj.subscribe("teleop",10,teleOPCallback);
+
+    ros::Subscriber emergency_sub = node_obj.subscribe("emergency_stop",100,emergencyCallback);
+
 	
     odom_pub = node_obj.advertise<nav_msgs::Odometry>("odom", 50);
     
@@ -401,8 +409,14 @@ void imuSensorCallback(const sensor_msgs::Imu& imu_msg1) //hong
     }
 }
 
+void emergencyCallback(const std_msgs::String::ConstPtr& msg)
+{
+    emergency_msg = msg->data;
+}
+
 void commandVelocityCallback(const geometry_msgs::Twist & cmd_vel_msg)
 {
+
     goal_velocity_from_cmd[LINEAR]  = cmd_vel_msg.linear.x;
     goal_velocity_from_cmd[ANGULAR] = cmd_vel_msg.angular.z;
 
@@ -424,11 +438,20 @@ void commandVelocityCallback(const geometry_msgs::Twist & cmd_vel_msg)
    
 }
 
+
 void updateGoalVelocity(void)
 {
-    // Recieve goal velocity through ros messages
-    goal_velocity[LINEAR]  = goal_velocity_from_cmd[LINEAR];
-    goal_velocity[ANGULAR] = goal_velocity_from_cmd[ANGULAR];
+    if (emergency_msg.find("stop") == std::string::npos)
+    {
+        // Recieve goal velocity through ros messages
+        goal_velocity[LINEAR]  = goal_velocity_from_cmd[LINEAR];
+        goal_velocity[ANGULAR] = goal_velocity_from_cmd[ANGULAR];
+    }
+    else
+    {
+        goal_velocity[LINEAR]  = 0;
+        goal_velocity[ANGULAR] = 0;
+    }
 
 #ifdef _DEBUG_MC        
 	//ROS_INFO_STREAM("GLS:" << goal_velocity[LINEAR] << " GAS:" << goal_velocity[ANGULAR]);

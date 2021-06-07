@@ -45,6 +45,7 @@ def main():
 
     rospy.init_node("init_pose_srv")
 
+
     start_pose_param = rospy.get_param("start_pose")
 
     start_pose = InitPoseSrv()
@@ -56,6 +57,7 @@ def main():
     rospy.sleep(1)
 
     initial_pos_pub(start_pose)
+
 
     rospy.sleep(1)
 
