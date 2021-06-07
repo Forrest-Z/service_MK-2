@@ -96,6 +96,9 @@ unsigned long time_now;
 unsigned long step_time;
 unsigned long prev_update_time;
 
+std::string emergency_msg = "";
+
+
 float left_motor_pos = 0.0f;
 float right_motor_pos = 0.0f;
 float left_motor_vel = 0.0f;
