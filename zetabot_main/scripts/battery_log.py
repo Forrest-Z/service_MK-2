@@ -32,6 +32,8 @@ def main():
 
     rospy.init_node("batt_log")
 
+    battery_log_save_flag = rospy.get_param("battery_log_save_flag",True)
+
     batt_sub = rospy.Subscriber("/battery",BatteryInformationMsgs,battery_callback)
     today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
 
@@ -60,28 +62,30 @@ def main():
     try :
         while (rospy.is_shutdown) :
 
+            if battery_log_save_flag :
+                while time.localtime(time.time()).tm_min == minit :
+                        rospy.sleep(2)
 
-            while time.localtime(time.time()).tm_min == minit :
-                    rospy.sleep(2)
-
-            f = open(file_name,'a')
-            wr = csv.writer(f)
-            log_name = ['Time'] + [j + i for i in BatteryInformationMsgs.__slots__[1:]  for j in ['BAT1_','BAT2_']]
-
-
-            now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
-
-            log = [now_time]
-            for i in range(len(battery1.__getstate__())) :
-                log.append(battery1.__getstate__()[i])
-                log.append(battery2.__getstate__()[i])
+                f = open(file_name,'a')
+                wr = csv.writer(f)
+                log_name = ['Time'] + [j + i for i in BatteryInformationMsgs.__slots__[1:]  for j in ['BAT1_','BAT2_']]
 
 
-            wr.writerow(log)
-            f.close()
-            print(log)
+                now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
 
-            minit = time.localtime(time.time()).tm_min
+                log = [now_time]
+                for i in range(len(battery1.__getstate__())) :
+                    log.append(battery1.__getstate__()[i])
+                    log.append(battery2.__getstate__()[i])
+
+
+                wr.writerow(log)
+                f.close()
+                print(log)
+
+                minit = time.localtime(time.time()).tm_min
+            else :
+                rospy.sleep(1)
 
         # rospy.spin()
 
