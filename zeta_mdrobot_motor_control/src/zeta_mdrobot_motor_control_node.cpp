@@ -416,24 +416,9 @@ void emergencyCallback(const std_msgs::String::ConstPtr& msg)
 
 void commandVelocityCallback(const geometry_msgs::Twist & cmd_vel_msg)
 {
-    if (emergency_msg.find("stop") == std::string::npos)
-    {
-    	goal_velocity_from_cmd[LINEAR]  = cmd_vel_msg.linear.x;
-    	goal_velocity_from_cmd[ANGULAR] = cmd_vel_msg.angular.z;
 
-    	// if (goal_velocity_from_cmd[ANGULAR] != 0.0f && fabs(goal_velocity_from_cmd[ANGULAR]) < 0.09f ){
-    	//     goal_velocity_from_cmd[ANGULAR] = 0.09f * (goal_velocity_from_cmd[ANGULAR] / fabs(goal_velocity_from_cmd[ANGULAR]));
-    	// }
-
-    	// if (goal_velocity_from_cmd[LINEAR] != 0.0f && fabs(goal_velocity_from_cmd[LINEAR]) < 0.015f ){
-    	//     goal_velocity_from_cmd[LINEAR] = 0.015f * (goal_velocity_from_cmd[LINEAR] / fabs(goal_velocity_from_cmd[LINEAR]));
-    	// }
-    }
-    else
-    {
-        goal_velocity_from_cmd[LINEAR]  = 0;
-    	goal_velocity_from_cmd[ANGULAR] = 0;
-    }
+    goal_velocity_from_cmd[LINEAR]  = cmd_vel_msg.linear.x;
+    goal_velocity_from_cmd[ANGULAR] = cmd_vel_msg.angular.z;
 
     goal_velocity_from_cmd[LINEAR]  = constrain(
                                       goal_velocity_from_cmd[LINEAR],
@@ -456,9 +441,17 @@ void commandVelocityCallback(const geometry_msgs::Twist & cmd_vel_msg)
 
 void updateGoalVelocity(void)
 {
-    // Recieve goal velocity through ros messages
-    goal_velocity[LINEAR]  = goal_velocity_from_cmd[LINEAR];
-    goal_velocity[ANGULAR] = goal_velocity_from_cmd[ANGULAR];
+    if (emergency_msg.find("stop") == std::string::npos)
+    {
+        // Recieve goal velocity through ros messages
+        goal_velocity[LINEAR]  = goal_velocity_from_cmd[LINEAR];
+        goal_velocity[ANGULAR] = goal_velocity_from_cmd[ANGULAR];
+    }
+    else
+    {
+        goal_velocity[LINEAR]  = 0
+        goal_velocity[ANGULAR] = 0
+    }
 
 #ifdef _DEBUG_MC        
 	//ROS_INFO_STREAM("GLS:" << goal_velocity[LINEAR] << " GAS:" << goal_velocity[ANGULAR]);
