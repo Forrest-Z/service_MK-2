@@ -449,8 +449,8 @@ void updateGoalVelocity(void)
     }
     else
     {
-        goal_velocity[LINEAR]  = 0
-        goal_velocity[ANGULAR] = 0
+        goal_velocity[LINEAR]  = 0;
+        goal_velocity[ANGULAR] = 0;
     }
 
 #ifdef _DEBUG_MC        
