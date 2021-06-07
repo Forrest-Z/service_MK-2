@@ -136,6 +136,8 @@ float constrain(float value, float min, float max);
 void commandVelocityCallback(const geometry_msgs::Twist& cmd_vel_msg);
 void imuSensorCallback(const sensor_msgs::Imu& imu_msg); //hong
 void teleOPCallback(const std_msgs::Bool& bool_msg);
+void emergencyCallback(const std_msgs::String::ConstPtr& msg);
+
 
 void WheelControl(int* publish_rate);
 void updateGoalVelocity(void);
