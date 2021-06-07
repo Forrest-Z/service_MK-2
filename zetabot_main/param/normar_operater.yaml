@@ -1,1 +1,7 @@
 battery_log_save_flag : True
+start_pose : {
+    position_x : 0.0,
+    position_y : 0.0,
+    orientation_z : 0.0,
+    orientation_w : 0.0
+}
