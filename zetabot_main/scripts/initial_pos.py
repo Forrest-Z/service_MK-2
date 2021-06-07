@@ -49,10 +49,10 @@ def main():
     start_pose_param = rospy.get_param("start_pose")
 
     start_pose = InitPoseSrv()
-    start_pose.position_x : start_pose_param['position_x']
-    start_pose.position_y : start_pose_param['position_y']
-    start_pose.orientation_z : start_pose_param['orientation_z']
-    start_pose.orientation_w : start_pose_param['orientation_w']
+    start_pose.position_x = start_pose_param['position_x']
+    start_pose.position_y = start_pose_param['position_y']
+    start_pose.orientation_z = start_pose_param['orientation_z']
+    start_pose.orientation_w = start_pose_param['orientation_w']
 
     rospy.sleep(1)
 
