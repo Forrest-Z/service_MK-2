@@ -26,16 +26,18 @@ from sensor_msgs.msg import Imu
 
 #ros simple goal lib
 import actionlib
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult, MoveBaseResult
 from zetabot_main.msg import MoveMsgs, MoveBaseActAction
 from zetabot_main.srv import TurnSrv
 from zetabot_main.msg import ChargingAction,ChargingActionGoal,ChargingFeedback,ChargingActionResult
+#from zetabot_main.msg import BatteryInformationMsgs
+
+from zetabot_main.srv import ModuleControllerSrv # hong
 
 
 class RosFunction:
     cancel_flag = False
-    battery_amount1 = 0
-    battery_amount2 = 0
+    battery_amount = 0.0
     degree = 0
     station_state = ""
 
@@ -45,11 +47,11 @@ class RosFunction:
         self.autocharge_publisher = rospy.Publisher('autocharge_state_NUC', UInt8, queue_size = 1)
 
         # subscriber setup
-        battery1_amount_subscriber = rospy.Subscriber('/battery1', String, self._battery1_amount_subscriber_callback)
-        battery2_amount_subscriber = rospy.Subscriber('/battery2', String, self._battery2_amount_subscriber_callback)
+        battery_amount_subscriber = rospy.Subscriber('/battery_SOC', Float32, self._battery_amount_subscriber_callback)
         station_subscriber = rospy.Subscriber('autocharge_state_INO', String, self._station_subscriber_callback)
         imu_subscriber = rospy.Subscriber('imu', Imu, self._imu_subscriber_callback)
         autocharge_cancel_subscriber = rospy.Subscriber("charging_cancel", Bool, self._cancel_subscriber_callback)
+        goal_result_subcriber = rospy.Subscriber('/move_base/result', MoveBaseActionResult, self._movebase_result_subscriber_callback)
 
         # srv
         self.turn_srv = rospy.ServiceProxy('/turn', TurnSrv)
@@ -75,11 +77,9 @@ class RosFunction:
 
         pub_rate.sleep()
 
-    def _battery1_amount_subscriber_callback(self, msg):
-        self.battery1_amount = int(msg.data)
-
-    def _battery2_amount_subscriber_callback(self, msg):
-        self.battery2_amount = int(msg.data)
+    def _battery_amount_subscriber_callback(self, msg):
+        #print("SOC: ", msg.data.SOC)
+        self.battery_amount = msg.data
 
     def _station_subscriber_callback(self, msg):
         self.station_state = msg.data
@@ -139,6 +139,9 @@ class RosFunction:
     def _cancel_subscriber_callback(self, data):
         self.cancel_flag = data.data    
 
+    def _movebase_result_subscriber_callback(self, data):
+        self.goal_status = data.status.status
+
     def movebase_client(self, x, y):
         print("movebase_client start!")
         client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
@@ -152,15 +155,26 @@ class RosFunction:
         goal.target_pose.pose.position.y = y
         goal.target_pose.pose.orientation.w = 1
 
+        self.goal_status = None
+        print("wait_before: ", self.goal_status)
+        
         print("send goal position!")
         client.send_goal(goal)
+        print("send goal position!1111111")
         wait = client.wait_for_result()
+        print("send goal position!22222222")
+
+        print("wait_after: ", self.goal_status)
+        print("send goal position!3333333")
+
+        if self.goal_status == 3: pass
+        else: self.movebase_client(0.316, -0.245)
+
         if not wait:
             rospy.logerr("Action server not available!")
             rospy.signal_shutdown("Action server not available!")
         else:
             return client.get_result()
-
 
 
 class AutochargeFunction:
@@ -191,7 +205,9 @@ class AutochargeFunction:
             print("* Exiting...")
 
         while True:
+            
             if self.Ros_Func.cancel_flag:
+                self.Ros_Func.cancel_flag = False
                 return False
 
             if self.stop_flag:
@@ -209,19 +225,16 @@ class AutochargeFunction:
             elif self.sequence == "guidance":
                 self._guidance_sequence()
             elif self.sequence == "charging":
+                print("SOC: ", self.Ros_Func.battery_amount)
                 self._charging_sequence()
             elif self.sequence == "not_connected":
+                print("SOC: ", self.Ros_Func.battery_amount)
                 self._not_connected_sequence()
-                self.finish()
-                return False
             elif self.sequence == "finish":
+                print("SOC: ", self.Ros_Func.battery_amount)
                 self._finish_sequence()
-                self.finish()
-                return False
             else:
                 self._else_sequence()
-                self.finish()
-                return False
 
             if cv2.waitKey(1) == ord('q'):
                 break
@@ -232,8 +245,8 @@ class AutochargeFunction:
         self.Ros_Func._autocharge_publisher(0)
         sleep(0.5)
 
-        self.Ros_Func.movebase_client(-2.14, -0.40)
-        self.Ros_Func.turn_srv(230)
+        self.Ros_Func.movebase_client(0.316, -0.245)
+        self.Ros_Func.turn_srv(100)
         self.sequence = "start"
 
     def _start_sequence(self):
@@ -368,9 +381,8 @@ class AutochargeFunction:
             self.sequence = "not_connected"
 
         elif self.Ros_Func.station_state == "contact":
-            if self.Ros_Func.battery_amount1 > 900:
-                if self.Ros_Func.battery_amount2 > 900:
-                    self.sequence = "finish"
+            if self.Ros_Func.battery_amount > 95:
+                self.sequence = "finish"
         else:
             pass
 
@@ -382,7 +394,15 @@ class AutochargeFunction:
     def _finish_sequence(self):
         self.Ros_Func._autocharge_publisher(7)
         print("finish!!!")
-        self.finish()
+
+        sleep(3000)
+
+        if self.Ros_Func.battery_amount > 95:
+            self.sequence = "finish"
+
+        else:
+            self.sequence = "charging"
+            pass
 
     def _else_sequence(self):
         self.Ros_Func._autocharge_publisher(8)
@@ -541,10 +561,12 @@ class chargingAction(object):
         self._as.start()
 
     def execute_cb(self, goal):
+        print ("111111111111111111111111111")
         # helper variables
         r = rospy.Rate(1)
         success = True
         
+        char_Func = AutochargeFunction()
         # append the seeds for the fibonacci sequence
         
         # publish info to the console for the user
@@ -553,9 +575,10 @@ class chargingAction(object):
         # self._feedback.feedback = my_first_ros_pkg.msg.TesttActionFeedback()
 
         #write to charging flow
-        # success = auch.charge_main()
-        os.system("mplayer ~/voice/charging_start.mp3")
+        char_Func = AutochargeFunction()
+        #os.system("mplayer ~/voice/charging_start.mp3")
         success = char_Func.autocharge_main()
+        print ("2222222222222222222222222222")
         
         # start executing the action
         # for i in range(1, goal.order):
@@ -572,6 +595,7 @@ class chargingAction(object):
         #     r.sleep()
           
         if success:
+
             os.system("mplayer ~/voice/charging_done.mp3")
             self._result.result = "end_autocharge_mode"
             rospy.loginfo('%s: Succeeded' % self._action_name)
@@ -588,5 +612,6 @@ if __name__ == '__main__':
 
     rospy.init_node('charging_server_example')
     server = chargingAction("charging_act")
+    print ("00000000000000000000000000000000")
     rospy.spin()
 
