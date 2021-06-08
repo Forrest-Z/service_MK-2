@@ -1,7 +1,12 @@
 battery_log_save_flag : False
 start_pose : {
-    position_x : 0.5,
-    position_y : 0.5,
-    orientation_z : 0.00792529289184,
-    orientation_w : 0.999968594373
+    position_x : -0.0369584168723,
+    position_y : 0.137466436738,
+    orientation_z : 0.999649626175,
+    orientation_w : 0.02646931977
+}
+charging_station_pose : {
+    position_x : 0.316,
+    position_y : -0.245,
+    degree : 100
 }

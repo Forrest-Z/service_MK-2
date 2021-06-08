@@ -1,7 +1,10 @@
 <launch>
     <rosparam file="$(find zetabot_main)/param/normar_operater.yaml" command="load" />
 
-    <include file="$(find zetabank_bringup)/launch/zetabank_robot.launch" />
+    <include file="$(find zetabank_bringup)/launch/zetabank_robot.launch">
+        <arg name="rs_serial_no_1" value="1"/>
+        <arg name="rs_serial_no_2" value="2"/>
+    </include>
 
     <node pkg="zetabot_main" type="battery_log.py" name="battery_log" />
 
@@ -12,10 +15,14 @@
     <node pkg="zetabot_main" type="sonar_filter.py" name="sonar_filter" />
 
     <include file="$(find zetabank_navigation)/launch/normal_navigation.launch" >
-        <arg name="map_file" value="$(find zetabank_navigation)/maps/gong0514.yaml"/>
+        <arg name="map_file" value="$(find zetabank_navigation)/maps/office2.yaml"/>
     </include>
 
-<!--
+
     <node pkg="zetabot_main" type="initial_pos.py" name="initial_pos_srv" />
--->
+
+    <!--autocharge-->
+    <!--schedule-->
+
+    
 </launch>
