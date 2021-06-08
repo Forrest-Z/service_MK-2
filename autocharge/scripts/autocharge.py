@@ -244,9 +244,12 @@ class AutochargeFunction:
     def _waiting_sequence(self):
         self.Ros_Func._autocharge_publisher(0)
         sleep(0.5)
+        #####hong
+        station_pose = rospy.get_param("/charging_station_pose")
 
-        self.Ros_Func.movebase_client(0.316, -0.245)
-        self.Ros_Func.turn_srv(100)
+        self.Ros_Func.movebase_client(station_pose["position_x"], station_pose["position_y"])
+        self.Ros_Func.turn_srv(station_pose["degree"])
+        #####hong
         self.sequence = "start"
 
     def _start_sequence(self):
