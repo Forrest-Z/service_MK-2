@@ -3,7 +3,7 @@ import rospy
 import os,sys
 
 from std_msgs.msg import String
-from std_msgs.msg import UInt8,UInt16, UInt64
+from std_msgs.msg import UInt8,UInt16, UInt64, Float32
 from std_msgs.msg import Int8
 from std_msgs.msg import Bool
 from zetabot_main.srv import ModuleControllerSrv
@@ -78,7 +78,7 @@ class led_controller() :
 
 
     def __init__(self) :
-        self.battery_sub = RosMaker("sub","/battery",UInt16)
+        self.battery_sub = RosMaker("sub","/battery_SOC",Float32)
         self.emergency_sub = RosMaker("sub","/emergency_stop",String)
         self.mode_sub = RosMaker("sub","/robot_mode",String)
         self.charging_sub = RosMaker("sub","/charging",Bool)
