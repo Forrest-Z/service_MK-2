@@ -1,10 +1,16 @@
 <launch>
 
+  <arg name="rs_serial_no_1"/>
+  <arg name="rs_serial_no_2"/>
+
     <include file="$(find zetabank_bringup)/launch/zetabank_remote.launch" />
   
   <include file="$(find zetabank_bringup)/launch/zetabank_lidar_sick561.launch"/>
 
-  <include file="$(find depthimage_to_laserscan)/launch/multi_laser.launch" />
+  <include file="$(find depthimage_to_laserscan)/launch/multi_laser.launch" >
+    <arg name="serial_no_1" value="$(arg rs_serial_no_1)"/>
+    <arg name="serial_no_2" value="$(arg rs_serial_no_2)"/>
+  </include>
 
 
   <include file="$(find ira_laser_tools)/launch/laserscan_multi_merger.launch" />
