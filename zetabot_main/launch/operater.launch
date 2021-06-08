@@ -11,7 +11,11 @@
 
     <node pkg="zetabot_main" type="sonar_filter.py" name="sonar_filter" />
 
-    <include file="$(find zetabank_navigation)/launch/normal_navigation.launch" />
+    <include file="$(find zetabank_navigation)/launch/normal_navigation.launch" >
+        <arg name="map_file" value="$(find zetabank_navigation)/maps/gong0514.yaml"/>
+    </include>
 
+<!--
     <node pkg="zetabot_main" type="initial_pos.py" name="initial_pos_srv" />
+-->
 </launch>

@@ -100,6 +100,7 @@ add_service_files(
   MoveBaseSrv.srv
   TurnSrv.srv
   ModuleControllerSrv.srv
+  InitPoseSrv.srv
 )
 generate_messages(
   DEPENDENCIES
