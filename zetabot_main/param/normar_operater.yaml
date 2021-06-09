@@ -15,3 +15,5 @@ charging_station_pose : {           #충전스테이션 도킹 진입시 좌표�
     position_y : -0.245,
     degree : 100
 }
+
+server_url : "http://192.168.0.51:8000/file/upload/"
