@@ -10,3 +10,5 @@ charging_station_pose : {
     position_y : -0.245,
     degree : 100
 }
+
+server_url : "http://192.168.0.51:8000/file/upload/"
