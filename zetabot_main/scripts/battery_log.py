@@ -68,8 +68,6 @@ def main():
 
                 f = open(file_name,'a')
                 wr = csv.writer(f)
-                log_name = ['Time'] + [j + i for i in BatteryInformationMsgs.__slots__[1:]  for j in ['BAT1_','BAT2_']]
-
 
                 now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
 
