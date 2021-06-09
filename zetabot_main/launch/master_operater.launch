@@ -2,8 +2,8 @@
     <rosparam file="$(find zetabot_main)/param/normar_operater.yaml" command="load" />
 
     <include file="$(find zetabank_bringup)/launch/zetabank_robot.launch">
-        <arg name="rs_serial_no_1" value="048322071701"/>
-        <arg name="rs_serial_no_2" value="048122070995"/>
+        <arg name="rs_serial_no_1" value="1"/>
+        <arg name="rs_serial_no_2" value="2"/>
     </include>
 
     <node pkg="zetabot_main" type="battery_log.py" name="battery_log" />
