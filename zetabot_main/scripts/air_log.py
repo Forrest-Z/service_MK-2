@@ -21,17 +21,6 @@ today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
 log_directory = "/home/zetabank/robot_log/air_log"
 file_name = log_directory + "/air_log_"+today+".csv"
 
-'''
-position:
-  x: -0.0622398506915
-  y: 0.0915844980196
-  z: 0.01
-orientation:
-  x: 0.0
-  y: 0.0
-  z: 0.999519377801
-  w: 0.0310002161404
-'''
 def air_callback(msg) :
     global air_log
     air_log = msg
@@ -54,18 +43,6 @@ def air_callback(msg) :
         f.close()
         print(log)
 
-'''
-Dust_PM2_5_ugm3: 34.0
-Dust_PM10_ugm3: 40.0
-CO2_ppm: 1039.0
-HCHO_ugm3: 45.0
-CO_ppm: 0.5
-NO2_ppm: 0.0219999998808
-Rn_Bqm3: 0.0360708795488
-TVOCs_ugm3: 6.9718583893e-38
-temp_celcius: 30.0
-hum_RHp: 29.6000003815
-'''
 def pose_callback(msg) :
     global pose_log
     global pose_ready_flag
