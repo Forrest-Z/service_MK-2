@@ -23,8 +23,10 @@
 
     <node pkg="zetabot_main" type="initial_pos.py" name="initial_pos_srv" />
 
+    <node pkg="autocharge" type="autocharge.py" name="autocharge_act_srv"/>
+
     <!--autocharge-->
     <!--schedule-->
 
-    
+
 </launch>
