@@ -30,7 +30,7 @@ rviz
 
 Terminal2 Launch Start (Jetson realsense)
 -------------------------------------------------------------------------------------
-ssh zetabank-jetson@192.168.113.21 -p 22
+ssh zetabank-jetson@192.168.112.21 -p 22
 password: zetabank
 
 roslaunch realsense2_camera rs_camera.launch
