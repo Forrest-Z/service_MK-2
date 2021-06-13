@@ -2,7 +2,7 @@
 import rospy
 
 from std_msgs.msg import UInt16,UInt64,Bool
-
+from zetabot_main.msg import PowerControlMsgs
 
 from zetabot_main.srv import ModuleControllerSrv
 from threading import Thread
@@ -17,10 +17,14 @@ from threading import Thread
 #-------------------------------------------------
 
 purifier_topic = "/purifier_control_command"
-uvc_control_topic = "/uvc_control_command"
+uvc_control_topic = "/power_control_command" #port 3
 led_topic = "/led_control_command"
 
-uvc_control_pub = rospy.Publisher(uvc_control_topic,Bool,queue_size=10)
+uvc_control_pub = rospy.Publisher(uvc_control_topic,PowerControlMsgs,queue_size=10)
+
+uvc_control_msg = PowerControlMsgs()
+uvc_control_msg.port = 3
+
 purifier_pub = rospy.Publisher(purifier_topic,UInt16,queue_size=10)
 led_command_pub = rospy.Publisher(led_topic,UInt64,queue_size=10)
 
@@ -157,9 +161,10 @@ def module_controller(comm_list):
         
         elif "uvc" == comm[0] :
             if "_on" in i :
-                uvc_control_pub.publish(True)
+                uvc_control_msg.state = True
             elif "_off" in i :
-                uvc_control_pub.publish(False)
+                uvc_control_msg.state = False
+            uvc_control_pub.publish(uvc_control_msg)    
             print("")
 
     return (str(comm_list))    
