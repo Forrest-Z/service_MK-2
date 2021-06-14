@@ -30,7 +30,7 @@ def air_callback(msg) :
         f = open(file_name,'a')
         wr = csv.writer(f)
 
-        now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min) ":" + str(time.localtime(time.time()).tm_sec)
+        now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min) + ":" + str(time.localtime(time.time()).tm_sec)
 
         log = [now_time]
         log.append(pose_log.position.x)

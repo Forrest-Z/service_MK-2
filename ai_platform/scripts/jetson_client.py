@@ -1,5 +1,9 @@
+#!/usr/bin/env python
+import rospy
 from socket import *
 from time import sleep
+
+rospy.init_node("jetson_starter")
 
 clientSock = socket(AF_INET, SOCK_STREAM)
 
