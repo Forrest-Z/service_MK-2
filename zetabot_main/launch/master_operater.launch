@@ -25,6 +25,8 @@
 
     <node pkg="autocharge" type="autocharge.py" name="autocharge_act_srv"/>
 
+    <include file="$(find ai_platform)/launch/ai_platform.launch" />
+
     <!--autocharge-->
     <!--schedule-->
 
