@@ -7,7 +7,7 @@ connected = False
 
 while not connected :
     try :
-        clientSock.connect(('192.168.113.21',8080))
+        clientSock.connect(('192.168.112.21',8080))
         connected = True
         print("connected!!")
     except :
