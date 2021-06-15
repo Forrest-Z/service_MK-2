@@ -3,6 +3,7 @@ import rospy
 import math
 import time
 
+from std_msgs.mgs import Int16
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Pose
 from zetabot_main.srv import TurnSrv
@@ -14,6 +15,7 @@ pose = Pose()
 
 
 cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+angle_pub = rospy.Publisher('/angle',Int16,queue_size=10)
 
 
 def quaternion_to_euler_angle(msg):
@@ -65,7 +67,7 @@ def pose_send(val) :
     X, Y, Z = quaternion_to_euler_angle(pose.orientation)
     robot_z_comp = g_rangle_range_tr(Z)
     robot_z = angle_scailing(robot_z_comp)
-    print("z : " + str(robot_z))
+    angle_pub.pub(robot_z)
 
 
 def get_rotation_flag(direction) :
