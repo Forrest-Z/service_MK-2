@@ -18,6 +18,8 @@ battery_cnt = 2
 
 today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
 
+yy_mm_dd = time.strftime('%Y-%m-%d', time.localtime(time.time()))
+
 log_directory = "/home/zetabank/robot_log/air_log"
 file_name = log_directory + "/air_log_"+today+".csv"
 
@@ -30,8 +32,7 @@ def air_callback(msg) :
         f = open(file_name,'a')
         wr = csv.writer(f)
 
-        now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min) + ":" + str(time.localtime(time.time()).tm_sec)
-
+        now_time = yy_mm_dd + " " + str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min) + ":" + str(time.localtime(time.time()).tm_sec)
         log = [now_time]
         log.append(pose_log.position.x)
         log.append(pose_log.position.y)
