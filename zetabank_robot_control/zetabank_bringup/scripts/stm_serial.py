@@ -24,7 +24,7 @@ class Command:
             #ros
             imu_topic = '/imu'
             ros_check = Ros_check(imu_topic)
-            time.sleep(5)
+            time.sleep(10)
 
             if not ros_check.check_flag:
                 nodes = os.popen("rosnode lsit").readline()
