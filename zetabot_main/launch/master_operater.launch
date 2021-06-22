@@ -6,9 +6,9 @@
         <arg name="rs_serial_no_2" value="2"/>
     </include>
 
-    <node pkg="zetabot_main" type="battery_log.py" name="battery_log" />
+    <node pkg="zetabot_main" type="battery_log.py" name="battery_log" respawn="true"/>
 
-    <node pkg="zetabot_main" type="air_log.py" name="air_log" />
+    <node pkg="zetabot_main" type="air_log.py" name="air_log" respawn="true"/>
 
     <node pkg="zetabot_main" type="module_controller.py" name="module_controller" />
 
