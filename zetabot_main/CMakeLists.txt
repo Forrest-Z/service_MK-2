@@ -66,7 +66,6 @@ find_package(catkin REQUIRED COMPONENTS
    MoveMsgs.msg
    SubPowerControlMsgs.msg
    PowerControlMsgs.msg
-   EnvironmentMsgs.msg
    BatteryInformationMsgs.msg
  )
 
