@@ -47,15 +47,24 @@ options = {
   tracking_frame = "imu_link",
   published_frame = "odom",
   odom_frame = "odom_frame",
+  publish_frame_projected_to_2d = false,
   provide_odom_frame = true,
   use_odometry = true,
-  use_laser_scan = true,
-  use_multi_echo_laser_scan = false,
+  use_nav_sat = false,
+  use_landmarks = false,
+  num_laser_scans = 1,
+  num_multi_echo_laser_scans = 0,
+  num_subdivisions_per_laser_scan = 1,
   num_point_clouds = 0,
   lookup_transform_timeout_sec = 0.2,
   submap_publish_period_sec = 0.3,
   pose_publish_period_sec = 0.5,
   trajectory_publish_period_sec = 0.5,
+  rangefinder_sampling_ratio = 1.,
+  odometry_sampling_ratio = 0.05,
+  fixed_frame_pose_sampling_ratio = 1.,
+  imu_sampling_ratio = 0.03,
+  landmarks_sampling_ratio = 1.,
 }
 
 --TRAJECTORY_BUILDER_2D.num_accumulated_range_data = 270
@@ -75,7 +84,7 @@ TRAJECTORY_BUILDER_2D.voxel_filter_size = 0.025
 
 
 
-TRAJECTORY_BUILDER_2D.submaps.resolution = 0.025
+-- TRAJECTORY_BUILDER_2D.submaps.resolution = 0.025
 
 -- POSE_GRAPH.constraint_builder.min_score = 0.65
 -- POSE_GRAPH.constraint_builder.global_localization_min_score = 0.7

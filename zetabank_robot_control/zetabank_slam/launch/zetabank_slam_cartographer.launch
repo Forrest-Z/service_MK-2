@@ -29,22 +29,22 @@
           -configuration_directory $(find zetabank_slam)/configuration
           -configuration_basename my_robot.lua"
       output="screen">
-      <remap from="/imu" to="flat_imu"/> 
-      <remap from="/odom" to="flat_odom"/> 
+      <!-- <remap from="/imu" to="flat_imu"/> 
+      <remap from="/odom" to="flat_odom"/>  -->
       <!-- <param name="base_frame" value="base_link"/> -->
       <!-- <param name="map_frame" value="map" />
       <param name="odom_frame" value="odom"/> -->
     <!-- <remap from="points2_1" to="horizontal_laser_3d" />
     <remap from="points2_2" to="vertical_laser_3d" /> -->
   </node>
-
+<!-- 
   <node pkg="turtlebot3_slam" type="flat_world_imu_node" name="flat_world_imu_node" output="screen">
       <remap from="imu_in" to="imu" />
       <remap from="imu_out" to="flat_imu" />
       <remap from="odom_in" to="odom" />
       <remap from="odom_out" to="flat_odom" />
-    </node>
+    </node> -->
 
-<!--  <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
-      type="cartographer_occupancy_grid_node" args="-resolution 0.05" /> -->
+ <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+      type="cartographer_occupancy_grid_node" args="-resolution 0.05" />
 </launch>
