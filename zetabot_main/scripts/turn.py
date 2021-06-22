@@ -3,7 +3,7 @@ import rospy
 import math
 import time
 
-from std_msgs.mgs import Int16
+from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Pose
 from zetabot_main.srv import TurnSrv
