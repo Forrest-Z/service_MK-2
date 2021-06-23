@@ -27,7 +27,7 @@
   <node name="cartographer_node" pkg="cartographer_ros"
       type="cartographer_node" args="
           -configuration_directory $(find zetabank_slam)/configuration
-          -configuration_basename my_robot.lua"
+          -configuration_basename zetabot.lua"
       output="screen">
       <!-- <remap from="/imu" to="flat_imu"/> 
       <remap from="/odom" to="flat_odom"/>  -->
