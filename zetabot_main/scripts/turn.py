@@ -67,7 +67,7 @@ def pose_send(val) :
     X, Y, Z = quaternion_to_euler_angle(pose.orientation)
     robot_z_comp = g_rangle_range_tr(Z)
     robot_z = angle_scailing(robot_z_comp)
-    angle_pub.pub(robot_z)
+    angle_pub.publish(robot_z)
 
 
 def get_rotation_flag(direction) :
