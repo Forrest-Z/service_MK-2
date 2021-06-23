@@ -1,8 +1,10 @@
 #! /usr/bin/env python
 
 import os
-import sys
-from time import time, sleep
+import sys 
+import csv
+import time
+from time import sleep
 import socket
 from threading import Thread
 import json
@@ -29,17 +31,36 @@ import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult, MoveBaseResult
 from zetabot_main.msg import MoveMsgs, MoveBaseActAction
 from zetabot_main.srv import TurnSrv
+from zetabot_main.msg import SonarArray
 from zetabot_main.msg import ChargingAction,ChargingActionGoal,ChargingFeedback,ChargingActionResult
 #from zetabot_main.msg import BatteryInformationMsgs
 
 from zetabot_main.srv import ModuleControllerSrv # hong
 
+station_pose = rospy.get_param("/charging_station_pose")
+
+log_directory = "/home/zetabank/robot_log/autocharge_log"
+today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
+file_name = log_directory + "/autocharge_log_"+today+".csv"
+
+if os.path.isfile(file_name):
+    print('ok')
+else :
+    if not os.path.exists(log_directory):
+        os.makedirs(log_directory)
+    f = open(file_name,'w')
+    wr = csv.writer(f)
+    log_name = ['Time', 'sequence']
+    wr.writerow(log_name)
+    f.close()
 
 class RosFunction:
     cancel_flag = False
     battery_amount = 0.0
+    sona_distance = 0
     degree = 0
     station_state = ""
+    now_angle = 0
 
     def __init__(self):
         # publisher setup - move_vel
@@ -51,7 +72,9 @@ class RosFunction:
         station_subscriber = rospy.Subscriber('autocharge_state_INO', String, self._station_subscriber_callback)
         imu_subscriber = rospy.Subscriber('imu', Imu, self._imu_subscriber_callback)
         autocharge_cancel_subscriber = rospy.Subscriber("charging_cancel", Bool, self._cancel_subscriber_callback)
-        goal_result_subcriber = rospy.Subscriber('/move_base/result', MoveBaseActionResult, self._movebase_result_subscriber_callback)
+        goal_result_subscriber = rospy.Subscriber('/move_base/result', MoveBaseActionResult, self._movebase_result_subscriber_callback)
+        sona_subscriber = rospy.Subscriber('/sonar', SonarArray, self._sona_subscriber_callback)
+        #angle_subscriber = rospy.Subscriber('/angle', Int16, self._angle_subscriber_callback)
 
         # srv
         self.turn_srv = rospy.ServiceProxy('/turn', TurnSrv)
@@ -142,6 +165,18 @@ class RosFunction:
     def _movebase_result_subscriber_callback(self, data):
         self.goal_status = data.status.status
 
+    def _sona_subscriber_callback(self, data):
+        self.sona_distance = int((data.data[5]+data.data[6])/2)
+        #print(type(self.sona_distance))
+        #print(self.sona_distance)
+
+        """
+        self.sona_left = data[5]
+        self.sona_right = data[6]
+        print("sona_left: ", self.sona_left)
+        print("sona_right: ", self.sona_right)
+        """
+
     def movebase_client(self, x, y):
         print("movebase_client start!")
         client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
@@ -168,7 +203,8 @@ class RosFunction:
         print("send goal position!3333333")
 
         if self.goal_status == 3: pass
-        else: self.movebase_client(0.316, -0.245)
+        else:
+            self.movebase_client(station_pose["position_x"], station_pose["position_y"])
 
         if not wait:
             rospy.logerr("Action server not available!")
@@ -188,6 +224,10 @@ class AutochargeFunction:
     sequence = ""
     stop_time = 0
 
+    search_fail_cnt = 0
+    detect_fail_cnt = 0
+    docking_fail_cnt = 0
+
     def __init__(self):
         self.stop_flag = False
         self.sequence = "waiting"
@@ -203,6 +243,8 @@ class AutochargeFunction:
         if len(sys.argv) != 1:
             print("- Usage : python {}".format(sys.argv[0]))
             print("* Exiting...")
+
+        print("autocharge start!!!")
 
         while True:
             
@@ -245,31 +287,40 @@ class AutochargeFunction:
         self.Ros_Func._autocharge_publisher(0)
         sleep(0.5)
         #####hong
-        station_pose = rospy.get_param("/charging_station_pose")
-
         self.Ros_Func.movebase_client(station_pose["position_x"], station_pose["position_y"])
         self.Ros_Func.turn_srv(station_pose["degree"])
         #####hong
+        self.detect_fail_cnt = 0
+        self.search_fail_cnt = 0
+        self.docking_fail_cnt = 0
         self.sequence = "start"
 
     def _start_sequence(self):
         self.Ros_Func._autocharge_publisher(1)
         if self.Ros_Func.station_state == "start":
             self.sequence = "search"
+            f = open(file_name,'a')
+            wr = csv.writer(f)
+
+            now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+            log = [now_time, self.sequence]
+
+            wr.writerow(log)
+            f.close()
 
     def _search_sequence(self):
         self.Ros_Func._autocharge_publisher(2)
 
         self.recog.image_processing()
-        print("search_image_processing@@@@@@@@@@@@")
+        #print("search_image_processing@@@@@@@@@@@@")
         self.center_check = self.recog.center_check
         self.robot_position = self.recog.robot_position
         self.degree = int(self.recog.degree)
         self.distance = int(self.recog.distance)
-        print("center_check: ", self.center_check)
-        print("robot_position: ", self.robot_position)
-        print("degree: ", self.degree)
-        print("distance: ", self.distance)
+        #print("center_check: ", self.center_check)
+        #print("robot_position: ", self.robot_position)
+        #print("degree: ", self.degree)
+        #print("distance: ", self.distance)
 
         if self.center_check == '-':
             if self.direction_flag == False:
@@ -285,24 +336,47 @@ class AutochargeFunction:
             self.sequence = "adjustment"
             if self.robot_position == 'CENTER':
                 self.stop_flag = True
+                self.detect_fail_cnt = 0
+                self.docking_fail_cnt = 0
+                self.search_fail_cnt = 0
+                self._stop_turn()
                 self.sequence = "guidance"
+                f = open(file_name,'a')
+                wr = csv.writer(f)
+
+                now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                log = [now_time, self.sequence]
+
+                wr.writerow(log)
+                f.close()
+            else: pass
         else: pass
+
+        if self.search_fail_cnt < 2000:
+            print("search_fail_cnt: ", self.search_fail_cnt)
+            self.search_fail_cnt += 1
+        else:
+            print("search_cancel")
+            #self.Ros_Func.turn_srv(self.station_pose["reset_degree"])
+            self._cancel_forward(0.05)
+            self.direction_flag = False
+            self.sequence = "waiting"
 
     def _adjustment_sequence(self):
         self.Ros_Func._autocharge_publisher(3)
 
         self.recog.image_processing()
-        print("adjustment_image_processing@@@@@@@@@@@@")
+        #print("adjustment_image_processing@@@@@@@@@@@@")
         self.center_check = self.recog.center_check
         self.robot_position = self.recog.robot_position
         self.degree = int(self.recog.degree)
         self.distance = int(self.recog.distance)
         self.target_distance = int(self.recog.target_distance)
-        print("center_check: ", self.center_check)
-        print("robot_position: ", self.robot_position)
-        print("degree: ", self.degree)
-        print("distance: ", self.distance)
-        print("target_distance: ", self.target_distance)
+        #print("center_check: ", self.center_check)
+        #print("robot_position: ", self.robot_position)
+        #print("degree: ", self.degree)
+        #print("distance: ", self.distance)
+        #print("target_distance: ", self.target_distance)
 
         if self.center_check == '-':
             self.stop_flag = True
@@ -325,6 +399,14 @@ class AutochargeFunction:
 
             elif self.robot_position == 'CENTER':
                 self.sequence = "guidance"
+                f = open(file_name,'a')
+                wr = csv.writer(f)
+
+                now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                log = [now_time, self.sequence]
+
+                wr.writerow(log)
+                f.close()
 
     def _guidance_sequence(self):
         self.Ros_Func._autocharge_publisher(4)
@@ -333,11 +415,17 @@ class AutochargeFunction:
         self.center_check = self.recog.center_check
         self.robot_position = self.recog.robot_position
         self.distance = int(self.recog.distance)
-        print("center_check: ", self.center_check)
-        print("robot_position: ", self.robot_position)
+        #print("center_check: ", self.center_check)
+        #print("robot_position: ", self.robot_position)
         print("distance: ", self.distance)
         
-        if self.distance > 30:
+        if self.Ros_Func.sona_distance < 8:
+            #self.Ros_Func.turn_srv(self.station_pose["reset_degree"])
+            self._cancel_forward(0.05)
+            self.direction_flag = False
+            self.sequence = "waiting"
+
+        elif self.Ros_Func.sona_distance > 40:
             if self.robot_position == "CENTER":
                 if self.center_check == "LEFT":
                     self._backward(0.02, 0.01)
@@ -362,19 +450,45 @@ class AutochargeFunction:
                 elif self.center_check == "CENTER":
                     self._backward(0.02, -0.01)
             else:
-                self.stop_flag = True
+                if self.detect_fail_cnt < 10:
+                    print("detect_fail_cnt: ", self.detect_fail_cnt)
+                    self.detect_fail_cnt += 1
+                else:
+                    print("guidance_cancel")
+                    #self.Ros_Func.turn_srv(self.station_pose["reset_degree"])
+                    self._cancel_forward(0.05)
+                    self.direction_flag = False
+                    self.sequence = "waiting"
 
         else:
             if self.Ros_Func.station_state == "contact":
                 self.stop_flag = True
                 self.sequence = "charging"
                 self.recog.finish()
+                f = open(file_name,'a')
+                wr = csv.writer(f)
+
+                now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                log = [now_time, self.sequence]
+
+                wr.writerow(log)
+                f.close()
             elif self.Ros_Func.station_state == "left":
                 self._backward(0.005, -0.01)
             elif self.Ros_Func.station_state == "right":
                 self._backward(0.005, 0.01)
             else:
                 self._backward(0.02, 0)
+
+                if self.docking_fail_cnt < 155:
+                    print("docking_fail_cnt: ", self.docking_fail_cnt)
+                    self.docking_fail_cnt += 1
+                else:
+                    print("guidance_cancel")
+                    #self.Ros_Func.turn_srv(self.station_pose["reset_degree"])
+                    self._cancel_forward(0.05)
+                    self.direction_flag = False
+                    self.sequence = "waiting"
 
     def _charging_sequence(self):
         sleep(3)
@@ -430,6 +544,10 @@ class AutochargeFunction:
         self.Ros_Func._velocity_publisher(True, velocity, 0)
         print(int(self.recog.target_distance))
         sleep(int(self.recog.target_distance) * 0.4)
+
+    def _cancel_forward(self, velocity):
+        self.Ros_Func._velocity_publisher(True, velocity, 0)
+        sleep(3)
 
     def _backward(self, velocity, angular):
         self.Ros_Func._velocity_publisher(True, -velocity, angular)
@@ -488,8 +606,6 @@ class AutochargeFunction:
         else:
             self.Ros_Func._velocity_publisher(True, 0, velocity)
 
-
-
     def _right_turn(self, velocity, _degree):
         if _degree != 0:
             _target_degree = self.Ros_Func.degree - 90
@@ -544,15 +660,14 @@ class AutochargeFunction:
         else:
             self.Ros_Func._velocity_publisher(True, 0, -velocity)
 
-
-
     def finish(self):
         self._stop_turn()
         self.recog.finish()
-        sys.exit("exit")
+        #sys.exit("exit")
 
 
 class chargingAction(object):
+    print("chargingAction start!!!")
     char_Func = AutochargeFunction()
     # create messages that are used to publish feedback/result
     # _feedback = my_first_ros_pkg.msg.TesttFeedback()
@@ -564,12 +679,10 @@ class chargingAction(object):
         self._as.start()
 
     def execute_cb(self, goal):
-        print ("111111111111111111111111111")
         # helper variables
         r = rospy.Rate(1)
         success = True
         
-        char_Func = AutochargeFunction()
         # append the seeds for the fibonacci sequence
         
         # publish info to the console for the user
@@ -580,8 +693,8 @@ class chargingAction(object):
         #write to charging flow
         char_Func = AutochargeFunction()
         #os.system("mplayer ~/voice/charging_start.mp3")
+        print("autocharge_main start!!!")
         success = char_Func.autocharge_main()
-        print ("2222222222222222222222222222")
         
         # start executing the action
         # for i in range(1, goal.order):
@@ -596,15 +709,14 @@ class chargingAction(object):
         #     self._as.publish_feedback(self._feedback)
         #     # this step is not necessary, the sequence is computed at 1 Hz for demonstration purposes
         #     r.sleep()
-          
+        
         if success:
-
-            os.system("mplayer ~/voice/charging_done.mp3")
+            #os.system("mplayer ~/voice/charging_done.mp3")
             self._result.result = "end_autocharge_mode"
             rospy.loginfo('%s: Succeeded' % self._action_name)
             self._as.set_succeeded(self._result)
         else:
-            os.system("mplayer ~/voice/charging_cancel.mp3")
+            #os.system("mplayer ~/voice/charging_cancel.mp3")
             self._result.result = "cancel_charging"
             rospy.loginfo('%s: cancled' % self._action_name)
             self._as.set_succeeded(self._result)
