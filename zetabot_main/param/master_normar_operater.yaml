@@ -16,7 +16,7 @@ charging_station_pose : {           #충전스테이션 도킹 진입시 좌표�
     degree : 100
 }
 docked_pose : {
-    position_x : -1.38754283478
+    position_x : -1.38754283478,
     position_y : -0.744211542415,
     orientation_z : -0.183234029872,
     orientation_w : 0.983069321206
