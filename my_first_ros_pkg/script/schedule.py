@@ -421,15 +421,14 @@ class Scheduler(object):
             #     ] #hub
 
             roming_list = [
-                {"x" : -0.073717, "y" : 2.2444315 },
-                {"x" : 2.101, "y" : -2.111 }
+                {"x" : 0.272, "y" : -1.7254315 }
                 ] #gj_3f  2.174, 1.427 -1.423, "y" : -1.019 }
 
             robot_mode_pub.publish("air_condition")           
             result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
             
             self.index += 1
-            if self.index >= 2 :
+            if self.index >= len(roming_list) :
                 self.index = 0
 
     def go_home(self,type,job_id) :
