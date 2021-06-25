@@ -17,10 +17,10 @@ from zetabot_main.msg import ChargingAction,ChargingActionGoal,ChargingFeedback,
 # from autocharge.msg import ChargingAction, ChargingActionGoal, ChargingGoal
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
 from actionlib_msgs.msg import GoalStatusArray
-from zetabot_main.srv import ModuleControllerSrv
+from zetabot_main.srv import ModuleControllerSrv, TurnQuaternionSrv
 from std_srvs.srv import Empty
 from geometry_msgs.msg import PoseWithCovarianceStamped
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Quaternion
 
 full_path = []
 
@@ -45,6 +45,8 @@ robot_mode_pub = rospy.Publisher('/robot_mode',String,queue_size=10)
 power_ctl_pub =  rospy.Publisher('power_ctl', String, queue_size=10)
 
 module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
+turn_quaternion_srv = rospy.ServiceProxy('/turn/quaternion', TurnQuaternionSrv)
+
 
 def initial_pos_pub():
     publisher = rospy.Publisher('initialpose', PoseWithCovarianceStamped, queue_size=10)
@@ -391,6 +393,7 @@ class Scheduler(object):
         global end_flag
 
         start_flag = True
+        move_flag = True
         cnt = 0
 
         # roming_list = [  
@@ -417,38 +420,72 @@ class Scheduler(object):
 
                 if cur_mode == 'rest' :
                     cur_mode = 'full_coverage'
-                    # result = movebase_client(roming_list[0]["x"],roming_list[4]["y"])
+                    self.index = 0
+
                     start_flag = False
+
+                    while cnt != 4 :
+                        move_flag = False
+                        result = movebase_client(full_path[self.index]["position"]["x"],full_path[self.index]["position"]["y"])
+
+                        if int(move_base_result_status) == 3:
+                            move_flag = True
+                            break
+
+                        else:
+                            cnt += 1
+                    cnt = 0
+
+                    pre_x, pre_y, pre_w, pre_z = full_path[self.index]["position"]["x"], full_path[self.index]["position"]["y"],  full_path[self.index]["orientation"]["w"],  full_path[self.index]["orientation"]["z"], 
+
+                    self.index += 1
+
+                    if self.index >= len(full_path) :
+                        self.index = 0
+                    
 
                 while cur_mode == 'full_coverage' :
                     print("call_back")
 
 
                     robot_mode_pub.publish("full_coverage")
+
+
                     print("x :",full_path[self.index]["position"]["x"])
                     print("y :",full_path[self.index]["position"]["y"])
-                    result = movebase_client(full_path[self.index]["position"]["x"],full_path[self.index]["position"]["y"],)
 
-                    rospy.sleep(1)
-                    print("done")
+                    if pre_x != full_path[self.index]["position"]["x"] or pre_y != full_path[self.index]["position"]["y"] :
+                        while cnt != 4 :
+                            move_flag = False
+                            result = movebase_client(full_path[self.index]["position"]["x"],full_path[self.index]["position"]["y"])
 
-                    print("result : " + str(move_base_result_status))
+                            if int(move_base_result_status) == 3:
+                                move_flag = True
+                                break
 
-
-                    if int(move_base_result_status) == 3:
+                            else:
+                                cnt += 1
                         cnt = 0
 
-                    else:
-                        cnt += 1
-                        if cnt >= 3 :
-                            cnt = 0
-                            None
-                        else :
-                            continue
+
+                    elif (pre_w != full_path[self.index]["orientation"]["w"] or pre_z != full_path[self.index]["orientation"]["z"]) and move_flag:
+                        orientation = Quaternion()
                         
-                    
+                        orientation.x = full_path[self.index]["orientation"]["x"]
+                        orientation.y = full_path[self.index]["orientation"]["y"]
+                        orientation.z = full_path[self.index]["orientation"]["z"]
+                        orientation.w = full_path[self.index]["orientation"]["w"]
+                        
+                        turn_quaternion_srv(orientation)
+
+
+
+                    pre_x, pre_y, pre_w, pre_z = full_path[self.index]["position"]["x"], full_path[self.index]["position"]["y"],  full_path[self.index]["orientation"]["w"],  full_path[self.index]["orientation"]["z"], 
+
 
                     self.index += 1
+
+                    cnt = 0
                     if self.index >= len(full_path) :
                         self.index = 0
 
@@ -518,7 +555,7 @@ def recv_move_base_status(msg) :
 
 def full_path_load() :
     global full_path
-    file_path = "/home/zetabank/catkin_ws/src/zetabot_main/path/path_V1.json"
+    file_path = "/home/zetabank/catkin_ws/src/zetabot_main/path/path_V2.json"
 
     with open(file_path, 'r') as json_file:
         full_path = json.load(json_file)
