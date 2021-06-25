@@ -1,38 +1,36 @@
 #! /usr/bin/env python
 import rospy
 
-import os
-import json
-
+import os,thread, threading
+import subprocess, shlex
 import actionlib
 from apscheduler.jobstores.base import JobLookupError
 from apscheduler.schedulers.background import BackgroundScheduler
 import time
 from std_msgs.msg import Bool
-from std_msgs.msg import String
-from zetabot_main.msg import MoveMsgs
+from std_msgs.msg import String,UInt16
+from geometry_msgs.msg import Twist
 from zetabot_main.msg import ScheduleAirAction, ScheduleAirGoal
 from zetabot_main.msg import ScheduleFullcoverageAction, ScheduleFullcoverageGoal
-from zetabot_main.msg import ChargingAction,ChargingActionGoal,ChargingFeedback,ChargingActionResult, ChargingGoal
-# from autocharge.msg import ChargingAction, ChargingActionGoal, ChargingGoal
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
-from actionlib_msgs.msg import GoalStatusArray
-from zetabot_main.srv import ModuleControllerSrv, TurnQuaternionSrv
+from zetabot_main.srv import InitPoseSrv
+from autocharge.msg import ChargingAction, ChargingActionGoal, ChargingGoal
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from zetabot_main.srv import ModuleControllerSrv
 from std_srvs.srv import Empty
+import my_first_ros_pkg.msg
 from geometry_msgs.msg import PoseWithCovarianceStamped
-from geometry_msgs.msg import Twist, Quaternion
-
-full_path = []
+from std_msgs.msg import UInt8
+import sys, select, termios, tty
+import random
 
 
 cur_mode = 'rest'
 air_result = ''
 floor_result = ''
 charging_result =''
+pre_charge_stat = ''
 
-move_base_result_status = None
-move_base_fail_cnt = 0
-
+srv = None
 
 
 cancle_result = ['cancel_air_condition_mode','cancel_fulcoverage','cancel_charging']
@@ -40,17 +38,41 @@ cancle_result = ['cancel_air_condition_mode','cancel_fulcoverage','cancel_chargi
 air_cancel_pub = rospy.Publisher('air_condition_cancel', Bool, queue_size=10)
 floor_cancel_pub = rospy.Publisher('floor_cleaning_cancel', Bool, queue_size=10)
 charging_cancel_pub = rospy.Publisher('charging_cancel', Bool, queue_size=10)
-cmd_vel_pub = rospy.Publisher('/cmd_vel',Twist,queue_size=10)
+cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 robot_mode_pub = rospy.Publisher('/robot_mode',String,queue_size=10)
 power_ctl_pub =  rospy.Publisher('power_ctl', String, queue_size=10)
 
-module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
-turn_quaternion_srv = rospy.ServiceProxy('/turn/quaternion', TurnQuaternionSrv)
 
+module_controller_srv = rospy.ServiceProxy("/module_controller_srv", ModuleControllerSrv)
+
+def os_system(path):
+    os.system(path)
+
+def charging_cancel_poweron():
+    power_ctl_pub.publish("on")
+    rospy.sleep(10)
+    thread.start_new_thread(os_system,('roslaunch zetabank_bringup zetabank_robot.launch',))
+    rospy.sleep(10)
+
+def charge_state_callback(data):
+    global pre_charge_stat
+    if pre_charge_stat == 4 and data.data == 5 :
+        pre_charge_stat = data.data    
+        print "444444444444555555555555555"
+        power_ctl_pub.publish("off")
+        rospy.sleep(10)
+        print os.system("pkill -INT -ef zetabank_bringup")
+    # if pre_charge_stat == 5 and data.data == 6 or data.data == 7:
+    #     pre_charge_stat = data.data
+    #     print "555555555555555666666666666"
+    #     #power_ctl_pub.publish("on")
+    #     rospy.sleep(10)
+    #     #thread.start_new_thread(os_system,('roslaunch zetabank_bringup zetabank_robot.launch',))
+    pre_charge_stat = data.data
+    
 
 def initial_pos_pub():
     publisher = rospy.Publisher('initialpose', PoseWithCovarianceStamped, queue_size=10)
-    rospy.init_node('initial_pos_pub', anonymous=True)
     #Creating the message with the type PoseWithCovarianceStamped
     rospy.loginfo("This node sets the turtlebot's position to the red cross on the floor. It will shudown after publishing to the topic /initialpose")
     start_pos = PoseWithCovarianceStamped()
@@ -59,13 +81,13 @@ def initial_pos_pub():
     start_pos.header.stamp = rospy.Time.now()
     #filling payload with relevant information gathered from subscribing
     # to initialpose topic published by RVIZ via rostopic echo initialpose
-    start_pos.pose.pose.position.x = -0.846684932709
-    start_pos.pose.pose.position.y = 0.333061099052
+    start_pos.pose.pose.position.x = 2.174
+    start_pos.pose.pose.position.y = 1.315
     start_pos.pose.pose.position.z = 1.0
 
     start_pos.pose.pose.orientation.x = 0.0
     start_pos.pose.pose.orientation.y = 0.0
-    start_pos.pose.pose.orientation.z = -1.123
+    start_pos.pose.pose.orientation.z = 2.123
     start_pos.pose.pose.orientation.w = 0.719166613815
 
     start_pos.pose.covariance[0] = 0.25
@@ -79,6 +101,8 @@ def initial_pos_pub():
     rospy.sleep(1)
     publisher.publish(start_pos)
     rospy.sleep(1)
+
+
 
 def cancel_mod_pub(mode):
     global air_result
@@ -133,6 +157,12 @@ def batterty_callback(data):
 def charging_client():
     global cur_mode
     global charging_result
+    global cur_mode
+    global srv
+    cur_mode = "charging"
+    print("charging_mode_on")
+    
+    
     if cur_mode == 'air_condition':
         cur_mode = 'charging'
         cancel_mod_pub('air_cleaning')
@@ -165,6 +195,7 @@ def charging_client():
     # Prints out the result of executing the action
     #charging end operat
     charging_result = client.get_result().result
+    print ("ttttttttttttttttttttttttt")
     cmd_vel = Twist()
     cmd_vel.linear.x = 0.03
     cmd_vel.angular.z = 0.00
@@ -172,13 +203,21 @@ def charging_client():
     cmd_vel_pub.publish(cmd_vel)
 
     rospy.sleep(5)
-
+    print ("ttttttttttttttttttttttttt22222222222222")
     cmd_vel.linear.x = 0.00
     cmd_vel.angular.z = 0.00
 
     cmd_vel_pub.publish(cmd_vel)
-
+    print ("ttttttttttttttttttttttttt333333333")
     cur_mode = 'rest'
+
+    print("Result:" + charging_result)
+    if charging_result == 'charging_cancel':
+        print("charging_cancel result" + charging_result)
+    cur_mode = 'rest'
+    #srv(-1.0974,-0.855,-0.1844,0.982)
+
+
     return  charging_result # A chargingResult
 
 def air_cleaning_client():
@@ -249,13 +288,10 @@ def floor_cleaning_client():
         return floor_result
 
 def movebase_client(x,y,z=1):
-    global move_base_fail_cnt
 
 
     clear_costmaps_srv = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
     clear_costmaps_srv()
-
-    move_base_fail_cnt = 0
 
     rospy.sleep(1)
 
@@ -321,6 +357,7 @@ class Scheduler(object):
     def battery_charge(self,type, job_id):
         global cur_mode
         cur_mode = "charging"
+        print("charging_mode_on")
         result = charging_client()
         print("Result:" + result.result)
         if result.result == 'charging_cancel':
@@ -330,6 +367,9 @@ class Scheduler(object):
     def charging_cancel(self,type, job_id):
         global  cur_mode
         if cur_mode == 'charging':
+            #charging_cancel_poweron()
+            #rospy.sleep(20)
+            #initial_pos_pub()
             cancel_mod_pub('charging')
             cur_mode = 'rest'
             print('charging cancel')
@@ -360,6 +400,7 @@ class Scheduler(object):
         else :
             self.charging_cancel_min = min_now + charging_cancel_term
             self.charging_cancel_hour = hour_now
+
         
     def roming_move(self,type, job_id) :
         global cur_mode
@@ -372,134 +413,28 @@ class Scheduler(object):
             #     {"x" : 3.15, "y" : -2.6 }
             #     ] ###gwang ju 
             
+            # roming_list = [
+            #     {"x" : 0.42, "y" : -1.74 },
+            #     {"x" : 4.35, "y" : 0.023 },
+            #     {"x" : 3.316, "y" : 2.301 },
+            #     {"x" : 0.66, "y" : -0.66 }
+            #     ] #hub
+
             roming_list = [
-                {"x" : 0.42, "y" : -1.74 },
-                {"x" : 4.35, "y" : 0.023 },
-                {"x" : 3.316, "y" : 2.301 },
-                {"x" : 0.66, "y" : -0.66 }
-                ] #hub
+                {"x" : -0.073717, "y" : 2.2444315 },
+                {"x" : 2.101, "y" : -2.111 }
+                ] #gj_3f  2.174, 1.427 -1.423, "y" : -1.019 }
 
             robot_mode_pub.publish("air_condition")           
             result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
             
             self.index += 1
-            if self.index >= 4 :
+            if self.index >= 2 :
                 self.index = 0
-
-    def fullcoverage(self,type, job_id) :
-        global full_path
-        global cur_mode
-        global move_base_result_status
-        global end_flag
-
-        start_flag = True
-        move_flag = True
-        cnt = 0
-
-        # roming_list = [  
-        #     {"x" : 6.0, "y" : 1.46 },
-        #     {"x" : 6.42, "y" : -2.81 },
-        #     {"x" : 2.8, "y" : 1.46 },
-        #     {"x" : 3.15, "y" : -2.6 }
-        #     ] ###gwang ju 
-            
-        # roming_list = [
-        #     {"x" : -5.568, "y" : 0.400, "z" : 84 },
-        #     {"x" : -0.581, "y" : -3.209, "z" : 84 }
-        #     ] #example
-
-
-
-        rospy.sleep(1)
-        
-        while True :
-            
-            rospy.sleep(0.1)
-            robot_mode_pub.publish("normal")
-            if start_flag :
-
-                if cur_mode == 'rest' :
-                    cur_mode = 'full_coverage'
-                    self.index = 0
-
-                    start_flag = False
-
-                    while cnt != 4 :
-                        move_flag = False
-                        result = movebase_client(full_path[self.index]["position"]["x"],full_path[self.index]["position"]["y"])
-
-                        if int(move_base_result_status) == 3:
-                            move_flag = True
-                            break
-
-                        else:
-                            cnt += 1
-                    cnt = 0
-
-                    pre_x, pre_y, pre_w, pre_z = full_path[self.index]["position"]["x"], full_path[self.index]["position"]["y"],  full_path[self.index]["orientation"]["w"],  full_path[self.index]["orientation"]["z"], 
-
-                    self.index += 1
-
-                    if self.index >= len(full_path) :
-                        self.index = 0
-                    
-
-                while cur_mode == 'full_coverage' :
-                    print("call_back")
-
-
-                    robot_mode_pub.publish("full_coverage")
-
-
-                    print("x :",full_path[self.index]["position"]["x"])
-                    print("y :",full_path[self.index]["position"]["y"])
-
-                    if pre_x != full_path[self.index]["position"]["x"] or pre_y != full_path[self.index]["position"]["y"] :
-                        while cnt != 4 :
-                            move_flag = False
-                            result = movebase_client(full_path[self.index]["position"]["x"],full_path[self.index]["position"]["y"])
-
-                            if int(move_base_result_status) == 3:
-                                move_flag = True
-                                break
-
-                            else:
-                                cnt += 1
-                        cnt = 0
-
-
-                    elif (pre_w != full_path[self.index]["orientation"]["w"] or pre_z != full_path[self.index]["orientation"]["z"]) and move_flag:
-                        orientation = Quaternion()
-                        
-                        orientation.x = full_path[self.index]["orientation"]["x"]
-                        orientation.y = full_path[self.index]["orientation"]["y"]
-                        orientation.z = full_path[self.index]["orientation"]["z"]
-                        orientation.w = full_path[self.index]["orientation"]["w"]
-                        
-                        turn_quaternion_srv(orientation)
-
-
-
-                    pre_x, pre_y, pre_w, pre_z = full_path[self.index]["position"]["x"], full_path[self.index]["position"]["y"],  full_path[self.index]["orientation"]["w"],  full_path[self.index]["orientation"]["z"], 
-
-
-                    self.index += 1
-
-                    cnt = 0
-                    if self.index >= len(full_path) :
-                        self.index = 0
-
-
-                self.index = 0
-
-            else :
-                rospy.sleep(0.2)
-
-
 
     def go_home(self,type,job_id) :
         robot_mode_pub.publish("charging")
-        result = movebase_client(-0.46,0.167)    
+        result = movebase_client(-0.46,0.167)
 
 
 
@@ -510,93 +445,105 @@ class Scheduler(object):
         elif job_id == 'air_condition':
             # self.sched.add_job(self.air_clean, type, seconds=10, id=job_id, args=('interval',job_id))
             print("sche")
-            self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
+            self.sched.add_job(self.roming_move, type, seconds=20, id=job_id, args=('interval',job_id))
         elif job_id == 'roming_':
             self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
         elif job_id == 'floor_cleaning':
             self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-fri',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
         elif job_id == 'charging' :
             #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
-            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='9,10,11,13,14,15,16,17,18', minute='0, 10, 20, 30, 40, 50', id='charging', args=('cron',job_id))
+            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='9,10,11,12,13,14,15,16,17,18', minute='0, 10, 20, 30, 40, 50', id='charging', args=('cron',job_id))
         elif job_id == 'charging_cancel' :
-            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='9,10,11,13,14,15,16,17,18', minute='5, 15, 25, 35, 45, 55', id='charging_cancel', args=('cron',job_id))
+            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='9,10,11,12,13,14,15,16,17,18', minute='5, 15, 25, 35, 45, 55', id='charging_cancel', args=('cron',job_id))
         elif job_id == 'charging_noon' :
             #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
             self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='12', minute='0', id='charging_noon', args=('cron',job_id))
         elif job_id == 'charging_cancel_noon' :
             self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='13', minute='10', id='charging_cancel_noon', args=('cron',job_id))  
 
-def recv_move_base_result(msg) :
-    global move_base_result_status
+def voice_random() :
+    path = "/home/zetabank/voice_gj/"
+    print(os.listdir(path))
 
-    move_base_result_status = msg.status.status
+    pre_num = -1
 
-def recv_move_base_status(msg) :
-    global move_base_fail_cnt
+    voice_list = os.listdir(path)
+    while True :
+        if cur_mode != 'charging' :
+            cur_num = random.randrange(0,5)
+            if cur_num != pre_num :
+                voice = "mplayer " + path +voice_list[cur_num]
+                result = os.system(voice)
+                pre_num = cur_num
+                time.sleep(5)
+            else :
+                time.sleep(0.1)
+        else :
+            time.sleep(1)
 
-    if len(msg.status_list) >= 1 :
-        if msg.status_list[0].status == 4 :
-            move_base_fail_cnt += 1
+def getKey():
+    tty.setraw(sys.stdin.fileno())
+    rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+    if rlist:
+        key = sys.stdin.read(1)
+    else:
+        key = ''
 
-    if move_base_fail_cnt == 10 :
-        data = Bool
+    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+    return key
 
-        data.data = True
-        emergency_stop_pub.publish(data)
-
-        clear_costmaps_srv = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
-        clear_costmaps_srv()
-
-        move_base_fail_cnt = 0
-        rospy.sleep(1)
-
-        data.data = False
-        emergency_stop_pub.publish(data)
-
-def full_path_load() :
-    global full_path
-    file_path = "/home/zetabank/catkin_ws/src/zetabot_main/path/path_V2.json"
-
-    with open(file_path, 'r') as json_file:
-        full_path = json.load(json_file)
-
-    del full_path[0]
-    del full_path[1]
 
 if __name__ == '__main__':
+    settings = termios.tcgetattr(sys.stdin)
     rospy.init_node('robot_schedule')
-    rospy.Subscriber("battery",String, batterty_callback)
-    rospy.Subscriber("/move_base/result", MoveBaseActionResult, recv_move_base_result)
-    # rospy.Subscriber("/move_base/status",GoalStatusArray,recv_move_base_status)
-
-
+    rospy.Subscriber("battery",UInt16, batterty_callback)
+    srv = rospy.ServiceProxy("/init_pose_srv",InitPoseSrv)
+    #rospy.Subscriber("autocharge_state_NUC", UInt8, charge_state_callback)
     scheduler = Scheduler()
 
-    # module_controller_srv("air_lv2_on")
+   
 
     # scheduler.scheduler('cron', "floor_cleaning")
-
-    # scheduler.scheduler('cron', "charging")
-    # scheduler.scheduler('cron', "charging_cancel")
-
     # scheduler.scheduler('cron', "charging_noon")
     # scheduler.scheduler('cron', "charging_cancel_noon")
     # scheduler.scheduler('interval', "roming_")
 
     # scheduler.scheduler('cron', "charging_cancel")
 
-    # scheduler.scheduler('interval', "air_condition")
+    t1 = threading.Thread(target=voice_random)
+    t1.daemon = True 
+    t1.start()
+    
+    
+    #module_controller_srv("air_lv2_on")
+    scheduler.scheduler('interval', "air_condition")
+    scheduler.scheduler('cron', "charging")
+    scheduler.scheduler('cron', "charging_cancel")
 
-    full_path_load()
+   
+    
 
-    scheduler.fullcoverage('cron','full')
+    count = 0
 
-    # charging_client()
 
-    # count = 0
-    # while True:
-    #     # print "Running main process..............."
-    #     rospy.sleep(1)
-    #     count += 1
-    #     #scheduler.kill_scheduler("1")
-    #     # print "######### kill cron schedule ##########"
+    while(1):
+        key = getKey()
+        if key == 'a' :
+            scheduler.roming_move("tt","tt")
+        elif key == 's' :
+            t1 = threading.Thread(target=charging_client)
+            t1.daemon = True 
+            t1.start()
+        elif key == 'd' :
+            global  cur_mode
+            print ("dddddddddddddd")
+            if cur_mode == 'charging':
+                #charging_cancel_poweron()
+                #rospy.sleep(20)
+                #initial_pos_pub()
+                cancel_mod_pub('charging')
+                cur_mode = 'rest'
+                print('charging cancel')
+            else:
+                print('Not charging')     
+            

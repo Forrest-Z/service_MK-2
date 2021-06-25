@@ -6,7 +6,7 @@ import time
 from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Pose
-from zetabot_main.srv import TurnSrv
+from zetabot_main.srv import TurnSrv, TurnQuaternionSrv
 
 
 a_val = 0.3
@@ -128,6 +128,13 @@ def turn(comm) :
 
     return True
 
+def turn_quaternion(comm) :
+    X, Y, Z = quaternion_to_euler_angle(comm.orientation)
+    z_comp = g_rangle_range_tr(Z)
+    z = angle_scailing(z_comp)
+    class z_class :
+        degree = z
+    return turn(z_class)
 
 def main():
 
@@ -139,7 +146,9 @@ def main():
 
     rospy.sleep(1)
 
-    srv = rospy.Service('/turn', TurnSrv, turn)
+    turn_srv = rospy.Service('/turn', TurnSrv, turn)
+
+    turn_quaternion_srv = rospy.Service('/turn/quaternion', TurnQuaternionSrv, turn_quaternion)
 
     print("turn_ready")
 

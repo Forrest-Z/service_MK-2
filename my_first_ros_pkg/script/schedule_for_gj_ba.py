@@ -1,8 +1,7 @@
 #! /usr/bin/env python
 import rospy
 
-import os
-import json
+import os , threading , random
 
 import actionlib
 from apscheduler.jobstores.base import JobLookupError
@@ -13,16 +12,13 @@ from std_msgs.msg import String
 from zetabot_main.msg import MoveMsgs
 from zetabot_main.msg import ScheduleAirAction, ScheduleAirGoal
 from zetabot_main.msg import ScheduleFullcoverageAction, ScheduleFullcoverageGoal
-from zetabot_main.msg import ChargingAction,ChargingActionGoal,ChargingFeedback,ChargingActionResult, ChargingGoal
 # from autocharge.msg import ChargingAction, ChargingActionGoal, ChargingGoal
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
-from actionlib_msgs.msg import GoalStatusArray
-from zetabot_main.srv import ModuleControllerSrv, TurnQuaternionSrv
+from zetabot_main.srv import ModuleControllerSrv
 from std_srvs.srv import Empty
+import my_first_ros_pkg.msg
 from geometry_msgs.msg import PoseWithCovarianceStamped
-from geometry_msgs.msg import Twist, Quaternion
-
-full_path = []
+from socket import *
 
 
 cur_mode = 'rest'
@@ -30,23 +26,27 @@ air_result = ''
 floor_result = ''
 charging_result =''
 
-move_base_result_status = None
-move_base_fail_cnt = 0
-
-
-
 cancle_result = ['cancel_air_condition_mode','cancel_fulcoverage','cancel_charging']
 
 air_cancel_pub = rospy.Publisher('air_condition_cancel', Bool, queue_size=10)
 floor_cancel_pub = rospy.Publisher('floor_cleaning_cancel', Bool, queue_size=10)
 charging_cancel_pub = rospy.Publisher('charging_cancel', Bool, queue_size=10)
-cmd_vel_pub = rospy.Publisher('/cmd_vel',Twist,queue_size=10)
+move_vel_pub = rospy.Publisher('/move_vel',MoveMsgs,queue_size=10)
 robot_mode_pub = rospy.Publisher('/robot_mode',String,queue_size=10)
 power_ctl_pub =  rospy.Publisher('power_ctl', String, queue_size=10)
 
-module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
-turn_quaternion_srv = rospy.ServiceProxy('/turn/quaternion', TurnQuaternionSrv)
 
+
+
+module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
+
+# serverSock = socket(AF_INET, SOCK_STREAM)
+# serverSock.bind(('192.168.112.2',8080))
+# # serverSock.bind(('192.168.43.60',8080))
+# serverSock.listen(1)
+move_base_result_status = None
+
+# connectionSock, addr = serverSock.accept()
 
 def initial_pos_pub():
     publisher = rospy.Publisher('initialpose', PoseWithCovarianceStamped, queue_size=10)
@@ -130,56 +130,58 @@ def batterty_callback(data):
     if int(data.data) > 1100 and cur_mode == 'charging' :
         charging_cancel_pub.publish(True)
 
-def charging_client():
-    global cur_mode
-    global charging_result
-    if cur_mode == 'air_condition':
-        cur_mode = 'charging'
-        cancel_mod_pub('air_cleaning')
-    elif cur_mode == 'full_coverage':
-        cur_mode = 'charging'
-        cancel_mod_pub('floor_cleaning')
-    elif cur_mode == 'rest':
-        cur_mode = 'charging'
+# def charging_client():
+#     global cur_mode
+#     global charging_result
+#     if cur_mode == 'air_condition':
+#         cur_mode = 'charging'
+#         cancel_mod_pub('air_cleaning')
+#     elif cur_mode == 'full_coverage':
+#         cur_mode = 'charging'
+#         cancel_mod_pub('floor_cleaning')
+#     elif cur_mode == 'rest':
+#         cur_mode = 'charging'
 
 
-    # Creates the SimpleActionClient, passing the type of the action
-    # (chargingAction) to the constructor.
-    client = actionlib.SimpleActionClient('charging_act', ChargingAction)
-    # Waits until the action server has started up and started
-    # listening for goals.
-    print ('wait for charging_server')
-    client.wait_for_server()
-    print ('wait for charging_server111')
-    # Creates a goal to send to the action server.
-    goal = ChargingGoal()
+#     # Creates the SimpleActionClient, passing the type of the action
+#     # (chargingAction) to the constructor.
+#     client = actionlib.SimpleActionClient('charging_act', ChargingAction)
+#     # Waits until the action server has started up and started
+#     # listening for goals.
+#     print ('wait for charging_server')
+#     client.wait_for_server()
+#     print ('wait for charging_server111')
+#     # Creates a goal to send to the action server.
+#     goal = ChargingGoal()
 
-    # Sends the goal to the action server.
-    robot_mode_pub.publish("charging")
-    client.send_goal(goal)
+#     # Sends the goal to the action server.
+#     robot_mode_pub.publish("charging")
+#     client.send_goal(goal)
 
-    # Waits for the server to finish performing the action.
-    print ('wait for charging_server22')
-    client.wait_for_result()
+#     # Waits for the server to finish performing the action.
+#     print ('wait for charging_server22')
+#     client.wait_for_result()
    
-    # Prints out the result of executing the action
-    #charging end operat
-    charging_result = client.get_result().result
-    cmd_vel = Twist()
-    cmd_vel.linear.x = 0.03
-    cmd_vel.angular.z = 0.00
+#     # Prints out the result of executing the action
+#     #charging end operat
+#     charging_result = client.get_result().result
+#     move_vel = MoveMsgs()
+#     move_vel.header.frame_id = 'charging'
+#     move_vel.linear_x = 0.03
+#     move_vel.angular_z = 0.00
 
-    cmd_vel_pub.publish(cmd_vel)
+#     move_vel_pub.publish(move_vel)
 
-    rospy.sleep(5)
+#     rospy.sleep(5)
 
-    cmd_vel.linear.x = 0.00
-    cmd_vel.angular.z = 0.00
+#     move_vel.header.frame_id = 'charging'
+#     move_vel.linear_x = 0.00
+#     move_vel.angular_z = 0.00
 
-    cmd_vel_pub.publish(cmd_vel)
+#     move_vel_pub.publish(move_vel)
 
-    cur_mode = 'rest'
-    return  charging_result # A chargingResult
+#     cur_mode = 'rest'
+#     return  charging_result # A chargingResult
 
 def air_cleaning_client():
     global cur_mode
@@ -249,13 +251,10 @@ def floor_cleaning_client():
         return floor_result
 
 def movebase_client(x,y,z=1):
-    global move_base_fail_cnt
 
 
     clear_costmaps_srv = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
     clear_costmaps_srv()
-
-    move_base_fail_cnt = 0
 
     rospy.sleep(1)
 
@@ -276,6 +275,11 @@ def movebase_client(x,y,z=1):
         # rospy.signal_shutdown("Action server not available!")
     else:
         return client.get_result()
+
+def recv_move_base_result(msg) :
+    global move_base_result_status
+
+    move_base_result_status = msg.status.status
 
 class Scheduler(object):
     def __init__(self):
@@ -363,37 +367,9 @@ class Scheduler(object):
         
     def roming_move(self,type, job_id) :
         global cur_mode
-        if cur_mode == 'rest' or cur_mode == 'air_condition':
-            print("call_back")
-            # roming_list = [  
-            #     {"x" : 6.0, "y" : 1.46 },
-            #     {"x" : 6.42, "y" : -2.81 },
-            #     {"x" : 2.8, "y" : 1.46 },
-            #     {"x" : 3.15, "y" : -2.6 }
-            #     ] ###gwang ju 
-            
-            roming_list = [
-                {"x" : 0.42, "y" : -1.74 },
-                {"x" : 4.35, "y" : 0.023 },
-                {"x" : 3.316, "y" : 2.301 },
-                {"x" : 0.66, "y" : -0.66 }
-                ] #hub
-
-            robot_mode_pub.publish("air_condition")           
-            result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
-            
-            self.index += 1
-            if self.index >= 4 :
-                self.index = 0
-
-    def fullcoverage(self,type, job_id) :
-        global full_path
-        global cur_mode
+        # global connectionSock
         global move_base_result_status
-        global end_flag
 
-        start_flag = True
-        move_flag = True
         cnt = 0
 
         # roming_list = [  
@@ -403,103 +379,91 @@ class Scheduler(object):
         #     {"x" : 3.15, "y" : -2.6 }
         #     ] ###gwang ju 
             
+#         roming_list = [
+#             {"x" : -5.604, "y" : -4.105, "z" : 84 },
+#             {"x" : -5.694, "y" : -3.622, "z" : 84 },
+#             {"x" : -4.198, "y" : -11.997, "z" : 338 },
+#             {"x" : -3.216, "y" : -0.66, "z" : 0 },
+#             {"x" : -5.278, "y" : -0.66, "z" : 0 }
+#             ] #example
+
+#         1 : x : -5.60440178216y : -4.10512694604z : 0.01
+# 2 : x : -5.69443403474y : -2.00302750495z : 0.01
+# 3 : x : -4.19825455821y : -2.18175119315z : 0.01
+# 4 : x : -3.21655457727y : -3.51095214234z : 0.01
+# 5 : x : -5.2789029404y : -5.93232939075z : 0.01
+
         # roming_list = [
-        #     {"x" : -5.568, "y" : 0.400, "z" : 84 },
-        #     {"x" : -0.581, "y" : -3.209, "z" : 84 }
-        #     ] #example
+        #     {"x" : 31.827, "y" : -13.402, "z" : 86 },
+        #     {"x" : 23.706, "y" : -8.914, "z" :  179},
+        #     {"x" : 13.925, "y" : -11.946, "z" : 86 },
+        #     {"x" : 2.968, "y" : -14.259, "z" :  305},
+        #     {"x" : -0.428, "y" : -15.641, "z" : 264 }
+        #     # {"x" : 0.66, "y" : -0.66, "z" : 0 }
+        #     ] #hub
+
+        roming_list = [
+            {"x" : 4.6552, "y" : -8.656, "z" : 86 },
+            {"x" : 12.641, "y" : -7.4986, "z" :  179},
+            {"x" : 12.7059, "y" : -9.857, "z" : 86 },
+            {"x" :  6.6689, "y" : -11.5549, "z" :  305}
+            # {"x" : 0.66, "y" : -0.66, "z" : 0 }
+            ] #bien
 
 
 
-        rospy.sleep(1)
-        
-        while True :
+
+        if cur_mode == 'rest' :
+            cur_mode = 'roming_move'
+
+        while cur_mode == 'roming_move' :
+            print("call_back")
+
+
+            robot_mode_pub.publish("air_condition")
+            result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
+
+            rospy.sleep(1)
+            print("done")
+
+            print("result : " + str(move_base_result_status))
+
+            if int(move_base_result_status) == 3 :
+                cnt = 0
+                # print("in_turn")
+                # turn_srv(roming_list[self.index]["z"])
             
-            rospy.sleep(0.1)
-            robot_mode_pub.publish("normal")
-            if start_flag :
+                # # msg = str(self.index)
+                # # print("msg : ",msg)
+                # # connectionSock.send(msg.encode('utf-8'))
+                # # print("send_msg : ",msg)
 
-                if cur_mode == 'rest' :
-                    cur_mode = 'full_coverage'
-                    self.index = 0
-
-                    start_flag = False
-
-                    while cnt != 4 :
-                        move_flag = False
-                        result = movebase_client(full_path[self.index]["position"]["x"],full_path[self.index]["position"]["y"])
-
-                        if int(move_base_result_status) == 3:
-                            move_flag = True
-                            break
-
-                        else:
-                            cnt += 1
-                    cnt = 0
-
-                    pre_x, pre_y, pre_w, pre_z = full_path[self.index]["position"]["x"], full_path[self.index]["position"]["y"],  full_path[self.index]["orientation"]["w"],  full_path[self.index]["orientation"]["z"], 
-
-                    self.index += 1
-
-                    if self.index >= len(full_path) :
-                        self.index = 0
-                    
-
-                while cur_mode == 'full_coverage' :
-                    print("call_back")
-
-
-                    robot_mode_pub.publish("full_coverage")
-
-
-                    print("x :",full_path[self.index]["position"]["x"])
-                    print("y :",full_path[self.index]["position"]["y"])
-
-                    if pre_x != full_path[self.index]["position"]["x"] or pre_y != full_path[self.index]["position"]["y"] :
-                        while cnt != 4 :
-                            move_flag = False
-                            result = movebase_client(full_path[self.index]["position"]["x"],full_path[self.index]["position"]["y"])
-
-                            if int(move_base_result_status) == 3:
-                                move_flag = True
-                                break
-
-                            else:
-                                cnt += 1
-                        cnt = 0
-
-
-                    elif (pre_w != full_path[self.index]["orientation"]["w"] or pre_z != full_path[self.index]["orientation"]["z"]) and move_flag:
-                        orientation = Quaternion()
-                        
-                        orientation.x = full_path[self.index]["orientation"]["x"]
-                        orientation.y = full_path[self.index]["orientation"]["y"]
-                        orientation.z = full_path[self.index]["orientation"]["z"]
-                        orientation.w = full_path[self.index]["orientation"]["w"]
-                        
-                        turn_quaternion_srv(orientation)
-
-
-
-                    pre_x, pre_y, pre_w, pre_z = full_path[self.index]["position"]["x"], full_path[self.index]["position"]["y"],  full_path[self.index]["orientation"]["w"],  full_path[self.index]["orientation"]["z"], 
-
-
-                    self.index += 1
-
-                    cnt = 0
-                    if self.index >= len(full_path) :
-                        self.index = 0
-
-
-                self.index = 0
+                # recv_msg = ''
+                # # while recv_msg != 'end' :
+                #     # recv_msg = connectionSock.recv(1024).decode("utf-8")
+                #     # print(recv_msg)
 
             else :
-                rospy.sleep(0.2)
+                cnt += 1
+                if cnt >= 3 :
+                    None
+                else :
+                    continue
+                
+            
+
+            self.index += 1
+            if self.index >= len(roming_list) :
+                self.index = 0
 
 
+        self.index = 0
 
     def go_home(self,type,job_id) :
         robot_mode_pub.publish("charging")
         result = movebase_client(-0.46,0.167)    
+
+
 
 
 
@@ -512,7 +476,9 @@ class Scheduler(object):
             print("sche")
             self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
         elif job_id == 'roming_':
-            self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
+            # self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
+            # self.sched.add_job(self.roming_move, 'cron', day_of_week='tue-sun', hour='9,13', minute='0', id=job_id, args=('cron',job_id))
+            self.sched.add_job(self.roming_move, 'cron', day_of_week='mon-sun', hour='15', minute='23', id=job_id, args=('cron',job_id))
         elif job_id == 'floor_cleaning':
             self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-fri',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
         elif job_id == 'charging' :
@@ -526,53 +492,43 @@ class Scheduler(object):
         elif job_id == 'charging_cancel_noon' :
             self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='13', minute='10', id='charging_cancel_noon', args=('cron',job_id))  
 
-def recv_move_base_result(msg) :
-    global move_base_result_status
 
-    move_base_result_status = msg.status.status
+def voice_random() :
+    path = "/home/zetabank/voice_gj/"
+    print(os.listdir(path))
 
-def recv_move_base_status(msg) :
-    global move_base_fail_cnt
+    pre_num = -1
 
-    if len(msg.status_list) >= 1 :
-        if msg.status_list[0].status == 4 :
-            move_base_fail_cnt += 1
-
-    if move_base_fail_cnt == 10 :
-        data = Bool
-
-        data.data = True
-        emergency_stop_pub.publish(data)
-
-        clear_costmaps_srv = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
-        clear_costmaps_srv()
-
-        move_base_fail_cnt = 0
-        rospy.sleep(1)
-
-        data.data = False
-        emergency_stop_pub.publish(data)
-
-def full_path_load() :
-    global full_path
-    file_path = "/home/zetabank/catkin_ws/src/zetabot_main/path/path_V2.json"
-
-    with open(file_path, 'r') as json_file:
-        full_path = json.load(json_file)
-
-    del full_path[0]
-    del full_path[1]
+    voice_list = os.listdir(path)
+    while True :
+        if cur_mode != 'charging' :
+            cur_num = random.randrange(0,5)
+            if cur_num != pre_num :
+                voice = "mplayer " + path +voice_list[cur_num]
+                result = os.system(voice)
+                pre_num = cur_num
+                time.sleep(120)
+            else :
+                time.sleep(0.1)
+        else :
+            time.sleep(1)
 
 if __name__ == '__main__':
     rospy.init_node('robot_schedule')
     rospy.Subscriber("battery",String, batterty_callback)
-    rospy.Subscriber("/move_base/result", MoveBaseActionResult, recv_move_base_result)
-    # rospy.Subscriber("/move_base/status",GoalStatusArray,recv_move_base_status)
 
+    rospy.Subscriber("/move_base/result", MoveBaseActionResult, recv_move_base_result)
 
     scheduler = Scheduler()
 
-    # module_controller_srv("air_lv2_on")
+
+
+    module_controller_srv("air_lv2_on")
+
+
+    t1 = threading.Thread(target=voice_random)
+    t1.daemon = True 
+    t1.start()
 
     # scheduler.scheduler('cron', "floor_cleaning")
 
@@ -584,19 +540,16 @@ if __name__ == '__main__':
     # scheduler.scheduler('interval', "roming_")
 
     # scheduler.scheduler('cron', "charging_cancel")
+    print("ready")
 
-    # scheduler.scheduler('interval', "air_condition")
+    scheduler.scheduler('cron', "roming_")
 
-    full_path_load()
-
-    scheduler.fullcoverage('cron','full')
-
-    # charging_client()
-
-    # count = 0
+    count = 0
     # while True:
     #     # print "Running main process..............."
     #     rospy.sleep(1)
     #     count += 1
     #     #scheduler.kill_scheduler("1")
     #     # print "######### kill cron schedule ##########"
+
+    rospy.spin()
