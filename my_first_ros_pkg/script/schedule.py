@@ -185,7 +185,7 @@ def charging_client():
     goal = ChargingGoal()
 
     # Sends the goal to the action server.
-    robot_mode_pub.publish("charging")
+    robot_mode_pub.publish("low_battery")
     client.send_goal(goal)
 
     # Waits for the server to finish performing the action.
