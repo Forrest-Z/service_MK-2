@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from time import time
 import rospy
 
 from std_msgs.msg import UInt16,UInt64,Bool
@@ -135,7 +136,16 @@ def led_controll(msg) :
     if command == command_ :
         return 0
     
-    led_command_pub.publish(command)
+    pre_time = time()
+    while time() - pre_time <= 3 :
+        led_command_pub.publish(command)
+        try :
+            sub_led_control_command_ack = rospy.wait_for_message("/led_control_command_ack",UInt64,timeout=0.5)
+        except :
+            sub_led_control_command_ack = UInt64()
+        if command == sub_led_control_command_ack.data :
+            break
+
     command_ = command
     print(hex(command))
 
