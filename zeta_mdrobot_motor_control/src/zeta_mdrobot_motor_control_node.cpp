@@ -350,9 +350,18 @@ void WheelControl(int* publish_rate)
            
             updateGoalVelocity();
 
-            check_vel_safety(goal_velocity);
 
-            controlMotor(goal_velocity);
+            if (emergency_msg.find("stop") != std::string::npos)
+            {
+                mdr_mc.TorqueOff(ON);
+            }
+            else
+            {
+                
+                check_vel_safety(goal_velocity);
+
+                controlMotor(goal_velocity);
+            }
 
             tTime[1] = t;
         }
