@@ -209,7 +209,7 @@ int mdrobot_motor_control::SetVelocity(short lVel, short rVel)
 	//ROS_INFO_STREAM(" [%d %d]  [%d %d]"  << sendBuf[6] << " " << sendBuf[7] << " " << sendBuf[9] << " " << sendBuf[10]);
 #endif	
 
-	ROS_INFO_STREAM("send vel : ("  << lVel << "," << rVel << ") ");
+	// ROS_INFO_STREAM("send vel : ("  << lVel << "," << rVel << ") ");
 
 	mc_serial.write(sendBuf, byPidDataSize);
 	memset(sendBuf,0,MAX_PACKET_SIZE);
@@ -469,7 +469,7 @@ void mdrobot_motor_control::TorqueOff(BYTE type)
 		sendBuf[6] = DISABLE;		
 	}
 
-	sendBuf[7] = DISABLE;
+	sendBuf[7] = 2;
 		
 	for(i = 0; i < 8; i++) 
 		byTempDataSum += sendBuf[i];
