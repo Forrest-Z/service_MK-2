@@ -130,7 +130,7 @@ class led_controller() :
                 self.cur_robot_mode = 'charging'
                 f_led_mode = Led.Mode.fade
                 b_led_mode = Led.Mode.fade
-                if self.battery_level <= self.battery_low_margin - self.battery_hysteresis_low :
+                if self.battery_sub.msg.data <= self.battery_low_margin - self.battery_hysteresis_low :
                     print("battery_low_charging1111")
                     self.battery_hysteresis_low = hysteresis_term
                     print("1")
@@ -140,7 +140,7 @@ class led_controller() :
                     print("3")
                     b_led_color = Led.Color.red
                     
-                elif self.battery_low_margin + self.battery_hysteresis_low <= self.battery_level < self.battery_midle_margin - self.battery_hysteresis_midle :
+                elif self.battery_low_margin + self.battery_hysteresis_low <= self.battery_sub.msg.data < self.battery_midle_margin - self.battery_hysteresis_midle :
                     print("battery_midle_charging")
                     self.battery_hysteresis_low = 0
                     self.battery_hysteresis_midle = hysteresis_term
@@ -148,19 +148,19 @@ class led_controller() :
                     f_led_color = Led.Color.orange
                     b_led_color = Led.Color.orange
 
-                elif self.battery_midle_margin + self.battery_hysteresis_midle <= self.battery_level < self.battery_full_margin - self.battery_hysteresis_high :                
+                elif self.battery_midle_margin + self.battery_hysteresis_midle <= self.battery_sub.msg.data < self.battery_full_margin - self.battery_hysteresis_high :                
                     print("battery_high_charging")
                     self.battery_hysteresis_midle = 0
                     self.battery_hysteresis_high = hysteresis_term
                     f_led_color = Led.Color.green
                     b_led_color = Led.Color.green
 
-                elif self.battery_full_margin <= self.battery_level :
+                elif self.battery_full_margin <= self.battery_sub.msg.data :
                     print("battery_max_charging")
                     f_led_color = Led.Color.green
                     b_led_color = Led.Color.green
-                    f_led_mode = Led.Mode.stay
-                    b_led_mode = Led.Mode.stay
+                    f_led_mode = Led.Mode.on
+                    b_led_mode = Led.Mode.on
 
             elif self.emergency_sub.msg.data != '' and self.cur_robot_mode != 'service':
                 f_led_mode = Led.Mode.blink_fast
