@@ -421,8 +421,11 @@ class Scheduler(object):
             #     ] #hub
 
             roming_list = [
-                {"x" : 0.272, "y" : -1.7254315 }
+                {"x" : 1.728, "y" : -1.109 },
+                {"x" : 2.406, "y" : 3.258 },
+                {"x" : -1.657, "y" : -0.358 }
                 ] #gj_3f  2.174, 1.427 -1.423, "y" : -1.019 }
+
 
             robot_mode_pub.publish("air_condition")           
             result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
@@ -451,9 +454,9 @@ class Scheduler(object):
             self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-fri',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
         elif job_id == 'charging' :
             #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
-            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='9,10,11,12,13,14,15,16,17,18', minute='0, 10, 20, 30, 40, 50', id='charging', args=('cron',job_id))
+            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='9,10,11,12,13,14,15,16,17,18', minute='0', id='charging', args=('cron',job_id))
         elif job_id == 'charging_cancel' :
-            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='9,10,11,12,13,14,15,16,17,18', minute='5, 15, 25, 35, 45, 55', id='charging_cancel', args=('cron',job_id))
+            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='9,10,11,12,13,14,15,16,17,18', minute='30', id='charging_cancel', args=('cron',job_id))
         elif job_id == 'charging_noon' :
             #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
             self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='12', minute='0', id='charging_noon', args=('cron',job_id))
