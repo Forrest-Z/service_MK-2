@@ -59,7 +59,7 @@
 
 #define WHEEL_NUM                         2
 #define WHEEL_RADIUS                      0.075          // meter
-#define WHEEL_SEPARATION                  0.44          // meter
+#define WHEEL_SEPARATION                  0.36          // meter
 #define MOTOR_POLE                        10
 #define TURNRATIO                         (MOTOR_POLE*3.0f)
 
