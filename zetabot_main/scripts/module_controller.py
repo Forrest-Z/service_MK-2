@@ -140,7 +140,7 @@ def led_controll(msg) :
     while time() - pre_time <= 3 :
         led_command_pub.publish(command)
         try :
-            sub_led_control_command_ack = rospy.wait_for_message("/led_control_command_ack",UInt64,timeout=0.5)
+            sub_led_control_command_ack = rospy.wait_for_message("/led_control_command_ack",UInt64,timeout=1)
         except :
             sub_led_control_command_ack = UInt64()
         if command == sub_led_control_command_ack.data :
