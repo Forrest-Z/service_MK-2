@@ -35,8 +35,8 @@
   <node pkg="robot_pose_publisher" type="robot_pose_publisher" name="robot_pose_publisher"/>
 
   <node pkg="zetabot_main" type="turn.py" name="turn_srv"/>
-<!-- 
-  <node pkg="autonomous_navigation" type="initializeAMCLParticles" name="AMCL_particles"/> -->
+
+  <node pkg="autonomous_navigation" type="initializeAMCLParticles" name="AMCL_particles"/>
 
   <!-- <include file="$(find rf2o_laser_odometry)/launch/rf2o_laser_odometry.launch"/> -->
 
