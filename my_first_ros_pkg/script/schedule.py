@@ -371,7 +371,6 @@ class Scheduler(object):
             #rospy.sleep(20)
             #initial_pos_pub()
             cancel_mod_pub('charging')
-            cur_mode = 'rest'
             print('charging cancel')
         else:
             print('Not charging')       
