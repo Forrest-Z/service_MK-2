@@ -101,10 +101,9 @@ class RosFunction:
 
         pub_rate.sleep()
 
-    def _robot_mode_publisher(self, mode):
+    def _robot_mode_charging_publisher(self):
         pub_rate = rospy.Rate(25) #5hz
 
-        rospy.loginfo(mode)
         self.robot_mode_publisher.publish("charging")
         pub_rate.sleep()
 
@@ -474,7 +473,7 @@ class AutochargeFunction:
             if self.Ros_Func.station_state == "contact":
                 self.stop_flag = True
                 self.sequence = "charging"
-                self.Ros_Func._robot_mode_publisher("charging")
+                self.Ros_Func._robot_mode_charging_publisher()
                 self.recog.finish()
                 f = open(file_name,'a')
                 wr = csv.writer(f)
