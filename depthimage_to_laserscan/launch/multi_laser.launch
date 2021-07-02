@@ -21,12 +21,12 @@
 <!-- run multi laserscan node-->
     <node pkg= "depthimage_to_laserscan" type= "depthimage_to_laserscan" name="depthimage_to_laserscan_cam1" args="load depthimage_to_laserscan/DepthImageToLaserScanNodelet laserscan_nodelet_manager">
         <remap from="image" to="/cam_1/aligned_depth_to_color/image_raw"/>
-        <param name="output_frame" value="camera_1_depth"/>
+        <param name="output_frame" value="cam_1_depth"/>
         <remap from="scan" to="/laserscan"/>
     </node>
     <node pkg= "depthimage_to_laserscan" type= "depthimage_to_laserscan" name="depthimage_to_laserscan_cam2" args="load depthimage_to_laserscan/DepthImageToLaserScanNodelet laserscan_nodelet_manager">
         <remap from="image" to="/cam_2/aligned_depth_to_color/image_raw"/>
-        <param name="output_frame" value="camera_2_depth"/>
+        <param name="output_frame" value="cam_2_depth"/>
         <remap from="scan" to="/laserscan2"/>
     </node>
     
