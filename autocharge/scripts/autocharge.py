@@ -36,8 +36,11 @@ from zetabot_main.msg import ChargingAction,ChargingActionGoal,ChargingFeedback,
 #from zetabot_main.msg import BatteryInformationMsgs
 
 from zetabot_main.srv import ModuleControllerSrv # hong
+from zetabot_main.srv import InitPoseSrv
 
+initpose_srv = None
 station_pose = rospy.get_param("/charging_station_pose")
+init_pose = rospy.get_param("/robot_init_pose")
 
 log_directory = "/home/zetabank/robot_log/autocharge_log"
 today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
@@ -66,7 +69,7 @@ class RosFunction:
         # publisher setup - move_vel
         self.velocity_publisher = rospy.Publisher('cmd_vel', Twist, queue_size = 1)
         self.autocharge_publisher = rospy.Publisher('autocharge_state_NUC', UInt8, queue_size = 1)
-
+        self.led_control_publisher = rospy.Publisher('/robot_mode', String, queue_size = 1)
         # subscriber setup
         battery_amount_subscriber = rospy.Subscriber('/battery_SOC', Float32, self._battery_amount_subscriber_callback)
         station_subscriber = rospy.Subscriber('autocharge_state_INO', String, self._station_subscriber_callback)
@@ -78,6 +81,7 @@ class RosFunction:
 
         # srv
         self.turn_srv = rospy.ServiceProxy('/turn', TurnSrv)
+        self.initpose_srv = rospy.ServiceProxy("/init_pose_srv",InitPoseSrv)
 
     def _autocharge_publisher(self, step_num):
         pub_rate = rospy.Rate(25) #5hz
@@ -98,6 +102,13 @@ class RosFunction:
         else:
             pass
 
+        pub_rate.sleep()
+
+    def _led_control_publisher(self, mode):
+        pub_rate = rospy.Rate(25)
+
+        rospy.loginfo(mode)
+        self.led_control_publisher.publish(mode)
         pub_rate.sleep()
 
     def _battery_amount_subscriber_callback(self, msg):
@@ -334,6 +345,15 @@ class AutochargeFunction:
         elif self.center_check == 'CENTER':
             self.stop_flag = True
             self.sequence = "adjustment"
+            f = open(file_name,'a')
+            wr = csv.writer(f)
+
+            now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+            log = [now_time, self.sequence]
+
+            wr.writerow(log)
+            f.close()
+
             if self.robot_position == 'CENTER':
                 self.stop_flag = True
                 self.detect_fail_cnt = 0
@@ -388,6 +408,14 @@ class AutochargeFunction:
                 self.direction_flag = True
                 self.stop_flag = True
                 self.sequence = "search"
+                f = open(file_name,'a')
+                wr = csv.writer(f)
+
+                now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                log = [now_time, self.sequence]
+
+                wr.writerow(log)
+                f.close()
                 sleep(1)
 
             elif self.robot_position == 'RIGHT':
@@ -395,6 +423,14 @@ class AutochargeFunction:
                 self.direction_flag = False
                 self.stop_flag = True
                 self.sequence = "search"
+                f = open(file_name,'a')
+                wr = csv.writer(f)
+
+                now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                log = [now_time, self.sequence]
+
+                wr.writerow(log)
+                f.close()
                 sleep(1)
 
             elif self.robot_position == 'CENTER':
@@ -407,6 +443,8 @@ class AutochargeFunction:
 
                 wr.writerow(log)
                 f.close()
+
+                self.Ros_Func.initpose_srv(init_pose["position_x"], init_pose["position_y"], init_pose["orientation_z"], init_pose["orientaion_w"])
 
     def _guidance_sequence(self):
         self.Ros_Func._autocharge_publisher(4)
@@ -424,6 +462,14 @@ class AutochargeFunction:
             self._cancel_forward(0.05)
             self.direction_flag = False
             self.sequence = "waiting"
+            f = open(file_name,'a')
+            wr = csv.writer(f)
+
+            now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+            log = [now_time, self.sequence]
+
+            wr.writerow(log)
+            f.close()
 
         elif self.Ros_Func.sona_distance > 40:
             if self.robot_position == "CENTER":
@@ -459,11 +505,20 @@ class AutochargeFunction:
                     self._cancel_forward(0.05)
                     self.direction_flag = False
                     self.sequence = "waiting"
+                    f = open(file_name,'a')
+                    wr = csv.writer(f)
+
+                    now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                    log = [now_time, self.sequence]
+
+                    wr.writerow(log)
+                    f.close()
 
         else:
             if self.Ros_Func.station_state == "contact":
                 self.stop_flag = True
                 self.sequence = "charging"
+                self.Ros_Func._led_control_publisher("low_battery")
                 self.recog.finish()
                 f = open(file_name,'a')
                 wr = csv.writer(f)
@@ -480,7 +535,7 @@ class AutochargeFunction:
             else:
                 self._backward(0.02, 0)
 
-                if self.docking_fail_cnt < 155:
+                if self.docking_fail_cnt < 200:
                     print("docking_fail_cnt: ", self.docking_fail_cnt)
                     self.docking_fail_cnt += 1
                 else:
@@ -489,23 +544,39 @@ class AutochargeFunction:
                     self._cancel_forward(0.05)
                     self.direction_flag = False
                     self.sequence = "waiting"
+                    f = open(file_name,'a')
+                    wr = csv.writer(f)
+
+                    now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                    log = [now_time, self.sequence]
+
+                    wr.writerow(log)
+                    f.close()
 
     def _charging_sequence(self):
         sleep(3)
         self.Ros_Func._autocharge_publisher(5)
 
-        if self.Ros_Func.station_state == "not_connected":
-            self.sequence = "not_connected"
+        #if self.Ros_Func.station_state == "disconnected":
+        #    self.sequence = "disconnected"
 
-        elif self.Ros_Func.station_state == "contact":
+        if self.Ros_Func.station_state == "contact":
             if self.Ros_Func.battery_amount > 95:
                 self.sequence = "finish"
+                f = open(file_name,'a')
+                wr = csv.writer(f)
+
+                now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                log = [now_time, self.sequence]
+
+                wr.writerow(log)
+                f.close()
         else:
             pass
 
-    def _not_connected_sequence(self):
+    def _disconnected_sequence(self):
         self.Ros_Func._autocharge_publisher(6)
-        print("not_connected!!!")
+        print("disconnected!!!")
         self.finish()
 
     def _finish_sequence(self):
@@ -516,9 +587,25 @@ class AutochargeFunction:
 
         if self.Ros_Func.battery_amount > 95:
             self.sequence = "finish"
+            f = open(file_name,'a')
+            wr = csv.writer(f)
+
+            now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+            log = [now_time, self.sequence]
+
+            wr.writerow(log)
+            f.close()
 
         else:
             self.sequence = "charging"
+            f = open(file_name,'a')
+            wr = csv.writer(f)
+
+            now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+            log = [now_time, self.sequence]
+
+            wr.writerow(log)
+            f.close()
             pass
 
     def _else_sequence(self):
@@ -547,7 +634,7 @@ class AutochargeFunction:
 
     def _cancel_forward(self, velocity):
         self.Ros_Func._velocity_publisher(True, velocity, 0)
-        sleep(3)
+        sleep(5)
 
     def _backward(self, velocity, angular):
         self.Ros_Func._velocity_publisher(True, -velocity, angular)
@@ -669,6 +756,7 @@ class AutochargeFunction:
 class chargingAction(object):
     print("chargingAction start!!!")
     char_Func = AutochargeFunction()
+    Ros_Func = RosFunction()
     # create messages that are used to publish feedback/result
     # _feedback = my_first_ros_pkg.msg.TesttFeedback()
     _result = ChargingActionResult()
@@ -718,9 +806,9 @@ class chargingAction(object):
         else:
             #os.system("mplayer ~/voice/charging_cancel.mp3")
             self._result.result = "cancel_charging"
+            self.Ros_Func._led_control_publisher("air_condition")
             rospy.loginfo('%s: cancled' % self._action_name)
             self._as.set_succeeded(self._result)
-
 
 if __name__ == '__main__':
     char_Func = AutochargeFunction()

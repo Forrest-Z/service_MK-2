@@ -370,44 +370,42 @@ class Scheduler(object):
             #     ] ###gwang ju 
         
             roming_list = [
-                {"x" : 1.065, "y" : -6.951 },
-                {"x" : 0.664, "y" : -1.181 },
-                {"x" : 0.1071, "y" : 3.088 },
-                {"x" : 0.270, "y" : 5.148 }
-                ] #hub(sang_cafe)
+                {"x" : -1.678, "y" : 4.731 },
+                {"x" : 0.735, "y" : 3.2 },
+                {"x" : 2.01, "y" : -1.15 },
+                {"x" : 3.16, "y" : -2.52 }
+                ]
 
             robot_mode_pub.publish("air_condition")           
             result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
-            
-        if cur_mode == 'rest' :
-            cur_mode = 'air_condition'
-            robot_mode_pub.publish("air_condition")
-
-
-        while cur_mode == 'air_condition' :
-            print("call_back")
-
-            result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
-
-            rospy.sleep(1)
-            print("done")
-
-            print("result : " + str(move_base_result_status))
-
-            if int(move_base_result_status) == 3 :
-                cnt = 0
-
-            else :
-                cnt += 1
-                if cnt >= 3 :
-                    None
-                else :
-                    continue
-                
             self.index += 1
             if self.index >= len(roming_list) :
                 self.index = 0
-        module_controller_srv("uvc_off,air_off")
+
+        # while cur_mode == 'air_condition' :
+        #     print("call_back")
+
+        #     result = movebase_client(roming_list[self.index]["x"],roming_list[self.index]["y"])
+
+        #     rospy.sleep(1)
+        #     print("done")
+
+        #     print("result : " + str(move_base_result_status))
+
+        #     if int(move_base_result_status) == 3 :
+        #         cnt = 0
+
+        #     else :
+        #         cnt += 1
+        #         if cnt >= 3 :
+        #             None
+        #         else :
+        #             continue
+                
+        #     self.index += 1
+        #     if self.index >= len(roming_list) :
+        #         self.index = 0
+        # module_controller_srv("uvc_off,air_off")
 
     def go_home(self,type,job_id) :
         robot_mode_pub.publish("charging")
@@ -426,17 +424,17 @@ class Scheduler(object):
         elif job_id == 'roming_':
             self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
         elif job_id == 'floor_cleaning':
-            self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-fri',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
+            self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-sun',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
         elif job_id == 'charging' :
             #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
-            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='9,10,11,13,14,15,16,17,18', minute='0, 10, 20, 30, 40, 50', id='charging', args=('cron',job_id))
+            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-sun', hour='1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23', minute='0, 10, 20, 30, 40, 50', id='charging', args=('cron',job_id))
         elif job_id == 'charging_cancel' :
-            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='9,10,11,13,14,15,16,17,18', minute='5, 15, 25, 35, 45, 55', id='charging_cancel', args=('cron',job_id))
+            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-sun', hour='1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23', minute='5, 15, 25, 35, 45, 55', id='charging_cancel', args=('cron',job_id))
         elif job_id == 'charging_noon' :
             #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
-            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='12', minute='0', id='charging_noon', args=('cron',job_id))
+            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-sun', hour='12', minute='0', id='charging_noon', args=('cron',job_id))
         elif job_id == 'charging_cancel_noon' :
-            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='13', minute='10', id='charging_cancel_noon', args=('cron',job_id))  
+            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-sun', hour='13', minute='10', id='charging_cancel_noon', args=('cron',job_id))  
 
 
 
@@ -462,7 +460,7 @@ if __name__ == '__main__':
 
     # scheduler.scheduler('interval', "air_condition")
 
-    module_controller_srv("uvc_on,air_lv3")
+    module_controller_srv("uvc_on,air_lv1")
 
 
     scheduler.roming_move("a","a")
