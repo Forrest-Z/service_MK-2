@@ -1,19 +1,21 @@
 # Python 2/3 compatibility
-from __future__ import print_function
+#from __future__ import print_function
 
 import cv2
 import sys
 import numpy as np
 import math
 from time import time, sleep
-import cgitb
+#import cgitb
 
-cgitb.enable(format = 'text')
+#cgitb.enable(format = 'text')
+
+global capture 
+capture = cv2.VideoCapture(0)
+capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 class recongnition:
-    capture = cv2.VideoCapture(0)
-    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     fps = capture.get(cv2.CAP_PROP_FPS) 
 
     try:
@@ -31,15 +33,15 @@ class recongnition:
     MIN_AREA, MAX_AREA = 50, 20000
     MIN_WIDTH, MAX_WIDTH = 5, 150
     MIN_HEIGHT, MAX_HEIGHT = 10, 100
-    MIN_POINT, MAX_POINT = 100, 400
+    MIN_POINT, MAX_POINT = 0, 480
     MIN_RATIO, MAX_RATIO = 0.5, 1.3
     MAX_AREA_DIFF = 0.4
     NUM_MATCHED = 6
 
     def __init__(self):
         #cv2.namedWindow('frame')
-        #cv2.namedWindow('cvt_frame')
-        #cv2.namedWindow('IR_camera')
+        cv2.namedWindow('cvt_frame')
+        cv2.namedWindow('IR_camera')
         #cv2.namedWindow('binary_camera')
         #cv2.namedWindow('dilate_frame')
         #cv2.namedWindow('erode_frame')
@@ -56,7 +58,7 @@ class recongnition:
         clahe_s = clahe.apply(s)
         hsv_merge = cv2.merge((h, clahe_s, v))
         cvt_frame = cv2.cvtColor(hsv_merge, cv2.COLOR_HSV2BGR)
-        ir_mark = cv2.inRange(hsv_merge, (120, 40, 210), (150, 90, 255))
+        ir_mark = cv2.inRange(hsv_merge, (0, 0, 230), (179, 30, 255))
         ir_frame = cv2.bitwise_and(hsv, hsv, mask= ir_mark)
         ir_frame = cv2.cvtColor(ir_frame, cv2.COLOR_HSV2BGR)
 
@@ -80,8 +82,8 @@ class recongnition:
         cv2.drawContours(result, contours= contours, contourIdx= -1, color= (255, 255, 255), thickness= 0)
 
         #cv2.imshow("frame", _frame)
-        #cv2.imshow("cvt_frame", cvt_frame)
-        #cv2.imshow("IR_camera", ir_frame)
+        cv2.imshow("cvt_frame", cvt_frame)
+        cv2.imshow("IR_camera", ir_frame)
         #cv2.imshow("binary_camera", binary_frame)
         #cv2.imshow("erode_frame", erode_frame)
         #cv2.imshow("dilate_frame", dilate_frame)
@@ -266,7 +268,7 @@ class recongnition:
         return _degree, _distance, _target_distance
 
     def image_processing(self):
-        ret, frame = self.capture.read()
+        ret, frame = capture.read()
         #print(ret)
 
         if ret == True:
@@ -284,7 +286,7 @@ class recongnition:
             self.robot_position = "-"
 
     def release(self):
-        self.capture.release()
+        capture.release()
         self.degree = 0.0
         self.distance = 0.0
         self.target_distance = 0.0
@@ -294,7 +296,7 @@ class recongnition:
 
 
     def finish(self):
-        self.capture.release()
+        #capture.release()
         cv2.destroyAllWindows()
 
 
