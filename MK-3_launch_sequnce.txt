@@ -55,3 +55,31 @@ rosrun zetabot_main turn.py
 manual controll
 -------------------------------------------------------------------------------------
 python teleop_key_module_sevice_ver2.py
+
+
+
+#slam
+-------------------------------------------------------------------------------------
+#install cartographer
+sudo apt install ros-melodic-cartographer
+
+#bringup
+roslaunch zetabank_bringup zetabank_robot.launch
+#rs_serial_no_# 리얼센스 값 넣고 실행하세요
+
+#imu & scan 동작상태 확인
+
+#cartographer
+roslaunch zetabank_slam zetabank_slam_cartographer.launch
+
+teleop 으로 맵핑후
+
+rosrun map_server map_saver -f [파일이름]
+
+
+#full_coverage_path
+-------------------------------------------------------------------------------------
+rosrun zetabot_main sub_full_path.py
+roslaunch full_coverage_path_planner test_full_coverage_path_planner.launch 
+
+
