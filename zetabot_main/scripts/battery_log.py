@@ -37,6 +37,9 @@ def main():
     batt_sub = rospy.Subscriber("/battery",BatteryInformationMsgs,battery_callback)
     today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
 
+    yy_mm_dd = time.strftime('%Y-%m-%d', time.localtime(time.time()))
+
+
     minit = 99
 
     rospy.sleep(1)
@@ -69,7 +72,7 @@ def main():
                 f = open(file_name,'a')
                 wr = csv.writer(f)
 
-                now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                now_time = yy_mm_dd + " " + str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
 
                 log = [now_time]
                 for i in range(len(battery1.__getstate__())) :
