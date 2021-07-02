@@ -66,7 +66,6 @@ find_package(catkin REQUIRED COMPONENTS
    MoveMsgs.msg
    SubPowerControlMsgs.msg
    PowerControlMsgs.msg
-   EnvironmentMsgs.msg
    BatteryInformationMsgs.msg
  )
 
@@ -101,6 +100,7 @@ add_service_files(
   TurnSrv.srv
   ModuleControllerSrv.srv
   InitPoseSrv.srv
+  TurnQuaternionSrv.srv
 )
 generate_messages(
   DEPENDENCIES
