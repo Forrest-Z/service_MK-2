@@ -420,7 +420,8 @@ class Scheduler(object):
             #     ] #hub
 
             roming_list = [
-                {"x" : 0.272, "y" : -1.7254315 }
+                {"x" : -3.1492, "y" : 0.6670 },
+                {"x" : -3.7029, "y" : -1.05195 }
                 ] #gj_3f  2.174, 1.427 -1.423, "y" : -1.019 }
 
             robot_mode_pub.publish("air_condition")           
@@ -447,17 +448,17 @@ class Scheduler(object):
         elif job_id == 'roming_':
             self.sched.add_job(self.roming_move, type, seconds=30, id=job_id, args=('interval',job_id))
         elif job_id == 'floor_cleaning':
-            self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-fri',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
+            self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-sun',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
         elif job_id == 'charging' :
             #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
-            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='9,10,11,12,13,14,15,16,17,18', minute='0, 10, 20, 30, 40, 50', id='charging', args=('cron',job_id))
+            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-sun', hour='0,1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23', minute='0', id='charging', args=('cron',job_id))
         elif job_id == 'charging_cancel' :
-            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='9,10,11,12,13,14,15,16,17,18', minute='5, 15, 25, 35, 45, 55', id='charging_cancel', args=('cron',job_id))
+            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-sun', hour='0,1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23', minute='30', id='charging_cancel', args=('cron',job_id))
         elif job_id == 'charging_noon' :
             #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
-            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-fri', hour='12', minute='0', id='charging_noon', args=('cron',job_id))
+            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-sun', hour='12', minute='0', id='charging_noon', args=('cron',job_id))
         elif job_id == 'charging_cancel_noon' :
-            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-fri', hour='13', minute='10', id='charging_cancel_noon', args=('cron',job_id))  
+            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-sun', hour='13', minute='10', id='charging_cancel_noon', args=('cron',job_id))  
 
 def voice_random() :
     path = "/home/zetabank/voice_gj/"
