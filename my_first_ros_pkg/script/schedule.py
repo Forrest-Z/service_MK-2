@@ -202,7 +202,7 @@ def charging_client():
 
     cmd_vel_pub.publish(cmd_vel)
 
-    rospy.sleep(5)
+    rospy.sleep(8)
     print ("ttttttttttttttttttttttttt22222222222222")
     cmd_vel.linear.x = 0.00
     cmd_vel.angular.z = 0.00
@@ -420,8 +420,8 @@ class Scheduler(object):
             #     ] #hub
 
             roming_list = [
-                {"x" : -3.1492, "y" : 0.6670 },
-                {"x" : -3.7029, "y" : -1.05195 }
+                {"x" : 1.97899, "y" : 2.789143 },
+                {"x" : 3.65309, "y" : 3.328505 }
                 ] #gj_3f  2.174, 1.427 -1.423, "y" : -1.019 }
 
             robot_mode_pub.publish("air_condition")           
@@ -451,9 +451,9 @@ class Scheduler(object):
             self.sched.add_job(self.floor_clean, 'cron', day_of_week='mon-sun',hour=str(self.floor_hour),minute=str(self.floor_min) , id='floor_cleaning', args=('cron',job_id))
         elif job_id == 'charging' :
             #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
-            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-sun', hour='0,1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23', minute='0', id='charging', args=('cron',job_id))
+            self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-sun', hour='0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23', minute='30', id='charging', args=('cron',job_id))
         elif job_id == 'charging_cancel' :
-            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-sun', hour='0,1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23', minute='30', id='charging_cancel', args=('cron',job_id))
+            self.sched.add_job(self.charging_cancel, 'cron', day_of_week='mon-sun', hour='0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23', minute='0', id='charging_cancel', args=('cron',job_id))
         elif job_id == 'charging_noon' :
             #self.sched.add_job(self.battery_charge, type, seconds=10, id=job_id, args=('interval',job_id))
             self.sched.add_job(self.battery_charge, 'cron', day_of_week='mon-sun', hour='12', minute='0', id='charging_noon', args=('cron',job_id))

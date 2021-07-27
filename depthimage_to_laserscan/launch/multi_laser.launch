@@ -9,6 +9,16 @@
         <arg name="camera" value="cam_1" />
         <arg name="serial_no" value="$(arg serial_no_1)" />
         <arg name="align_depth" value="True" />
+        <arg name="enable_infra" value="False" />
+        <arg name="enable_infra1" value="False" />
+        <arg name="enable_infra2" value="False" />
+        <arg name="infra_rgb" value="False" />
+        <!-- <arg name="enable_imu" value="False" /> -->
+        <arg name="enable_fisheye" value="False" />
+        <arg name="enable_gyro" value="False" />
+        <arg name="enable_accel" value="False" />
+        <arg name="enable_pointcloud" value="False" />
+        <arg name="enable_sync" value="False" />
     </include>
 
     <include file="$(find realsense2_camera)/launch/rs_camera.launch">
@@ -16,6 +26,16 @@
         <arg name="camera" value="cam_2" />
         <arg name="serial_no" value="$(arg serial_no_2)" />
         <arg name="align_depth" value="True" />
+        <arg name="enable_infra" value="False" />
+        <arg name="enable_infra1" value="False" />
+        <arg name="enable_infra2" value="False" />
+        <arg name="infra_rgb" value="False" />
+        <!-- <arg name="enable_imu" value="False" /> -->
+        <arg name="enable_fisheye" value="False" />
+        <arg name="enable_gyro" value="False" />
+        <arg name="enable_accel" value="False" />
+        <arg name="enable_pointcloud" value="False" />
+        <arg name="enable_sync" value="False" />
     </include>
 
 <!-- run multi laserscan node-->
