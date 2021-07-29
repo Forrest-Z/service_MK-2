@@ -14,7 +14,7 @@ class Ros_check:
 
 class Command:
     def __init__(self):
-        self.command_rosrun = "rosrun rosserial_python serial_node.py _port:=/dev/ttyACM{} _baud:=460800 __name:='STM'"
+        self.command_rosrun = "rosrun rosserial_python serial_node.py _port:=/dev/ttyACM{} _baud:=115200 __name:='STM'"
     def ACM_check(self):
         for i in range(2):
             command_rosrun = self.command_rosrun.format(i)
