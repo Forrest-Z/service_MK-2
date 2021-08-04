@@ -2,16 +2,20 @@
 #from __future__ import print_function
 
 import cv2
-import sys
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+
 import numpy as np
 import math
 from time import time, sleep
 #import cgitb
+from camera_usb_setup import CameraUsbSetup
 
 #cgitb.enable(format = 'text')
+CUS = CameraUsbSetup()
 
 global capture 
-capture = cv2.VideoCapture(0)
+capture = cv2.VideoCapture(CUS.detect_index())
 capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
@@ -40,8 +44,8 @@ class recongnition:
 
     def __init__(self):
         #cv2.namedWindow('frame')
-        cv2.namedWindow('cvt_frame')
-        cv2.namedWindow('IR_camera')
+        #cv2.namedWindow('cvt_frame')
+        #cv2.namedWindow('IR_camera')
         #cv2.namedWindow('binary_camera')
         #cv2.namedWindow('dilate_frame')
         #cv2.namedWindow('erode_frame')
@@ -69,6 +73,8 @@ class recongnition:
         kernel = np.ones((2,2), np.uint8)
         erode_frame = cv2.erode(dilate_frame, kernel, iterations = 2)
         _, contours, _ = cv2.findContours(erode_frame, mode= cv2.RETR_EXTERNAL, method= cv2.CHAIN_APPROX_SIMPLE)
+        #contours, _ = cv2.findContours(erode_frame, mode= cv2.RETR_EXTERNAL, method= cv2.CHAIN_APPROX_SIMPLE)
+
 
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
@@ -77,13 +83,15 @@ class recongnition:
                 cv2.rectangle(erode_frame, pt1 = (x, y), pt2 = (x+w, y+h), color = (230, 255, 100), thickness = -1)
 
         _, contours, _ = cv2.findContours(erode_frame, mode= cv2.RETR_EXTERNAL, method= cv2.CHAIN_APPROX_SIMPLE)
+        #contours, _ = cv2.findContours(erode_frame, mode= cv2.RETR_EXTERNAL, method= cv2.CHAIN_APPROX_SIMPLE)
+
 
         result = np.zeros((480, 640, 3), dtype= np.uint8)
         cv2.drawContours(result, contours= contours, contourIdx= -1, color= (255, 255, 255), thickness= 0)
 
         #cv2.imshow("frame", _frame)
-        cv2.imshow("cvt_frame", cvt_frame)
-        cv2.imshow("IR_camera", ir_frame)
+        #cv2.imshow("cvt_frame", cvt_frame)
+        #cv2.imshow("IR_camera", ir_frame)
         #cv2.imshow("binary_camera", binary_frame)
         #cv2.imshow("erode_frame", erode_frame)
         #cv2.imshow("dilate_frame", dilate_frame)

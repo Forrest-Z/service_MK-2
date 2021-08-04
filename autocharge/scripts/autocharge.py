@@ -6,6 +6,7 @@ import csv
 import time
 from time import sleep
 import socket
+import datetime
 from threading import Thread
 import json
 import cv2
@@ -24,6 +25,7 @@ from std_msgs.msg import UInt8
 from std_msgs.msg import UInt64
 from std_msgs.msg import Char
 from std_msgs.msg import Float32
+from std_srvs.srv import Empty
 from sensor_msgs.msg import Imu
 
 #ros simple goal lib
@@ -38,13 +40,64 @@ from zetabot_main.msg import ChargingAction,ChargingActionGoal,ChargingFeedback,
 from zetabot_main.srv import ModuleControllerSrv # hong
 from zetabot_main.srv import InitPoseSrv
 
+
+from geometry_msgs.msg import PoseWithCovarianceStamped
+from zetabot_main.srv import InitPoseSrv
+
 initpose_srv = None
 station_pose = rospy.get_param("/charging_station_pose")
 init_pose = rospy.get_param("/robot_init_pose")
 
+
 log_directory = "/home/zetabank/robot_log/autocharge_log"
 today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
 file_name = log_directory + "/autocharge_log_"+today+".csv"
+
+
+
+def initial_pos_pub():
+    global init_pose
+
+    print("#####################################################################################################")
+
+    publisher = rospy.Publisher('initialpose', PoseWithCovarianceStamped, queue_size=10)
+    #Creating the message with the type PoseWithCovarianceStamped
+    rospy.loginfo("This node sets the turtlebot's position to the red cross on the floor. It will shudown after publishing to the topic /initialpose")
+    start_pos = PoseWithCovarianceStamped()
+    #filling header with relevant information
+    start_pos.header.frame_id = "map"
+    start_pos.header.stamp = rospy.Time.now()
+    #filling payload with relevant information gathered from subscribing
+    # to initialpose topic published by RVIZ via rostopic echo initialpose
+    start_pos.pose.pose.position.x = init_pose['position_x']
+    start_pos.pose.pose.position.y = init_pose['position_y']
+    start_pos.pose.pose.position.z = 1.0
+
+    start_pos.pose.pose.orientation.x = 0.0
+    start_pos.pose.pose.orientation.y = 0.0
+    start_pos.pose.pose.orientation.z = init_pose['orientation_z']
+    start_pos.pose.pose.orientation.w = init_pose['orientation_w']
+
+    start_pos.pose.covariance[0] = 0.25
+    start_pos.pose.covariance[7] = 0.25
+    start_pos.pose.covariance[1:7] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] 
+    start_pos.pose.covariance[8:34] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] 
+    start_pos.pose.covariance[35] = 0.06853891945200942
+
+    print("#####################################################################################################")
+
+    print(start_pos)
+
+    rospy.loginfo(start_pos)
+    rospy.sleep(1)
+    publisher.publish(start_pos)
+    rospy.sleep(1)
+
+    return True
+
+
+
 
 if os.path.isfile(file_name):
     print('ok')
@@ -80,6 +133,7 @@ class RosFunction:
         #angle_subscriber = rospy.Subscriber('/angle', Int16, self._angle_subscriber_callback)
 
         # srv
+        self.clear_costmaps_srv = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
         self.turn_srv = rospy.ServiceProxy('/turn', TurnSrv)
         self.initpose_srv = rospy.ServiceProxy("/init_pose_srv",InitPoseSrv)
 
@@ -201,6 +255,8 @@ class RosFunction:
         goal.target_pose.pose.position.y = y
         goal.target_pose.pose.orientation.w = 1
 
+        self.clear_costmaps_srv()
+
         self.goal_status = None
         print("wait_before: ", self.goal_status)
         
@@ -223,7 +279,6 @@ class RosFunction:
         else:
             return client.get_result()
 
-
 class AutochargeFunction:
     Ros_Func = RosFunction()
     recog = recongnition()
@@ -242,6 +297,7 @@ class AutochargeFunction:
     def __init__(self):
         self.stop_flag = False
         self.sequence = "waiting"
+        self.finish_time_checker = False
 
     def init(self):
         self.center_check = '-'
@@ -295,7 +351,7 @@ class AutochargeFunction:
         self.finish()
 
     def _waiting_sequence(self):
-        self.Ros_Func._autocharge_publisher(0)
+        self.Ros_Func._autocharge_publisher(1)
         sleep(0.5)
         #####hong
         self.Ros_Func.movebase_client(station_pose["position_x"], station_pose["position_y"])
@@ -349,8 +405,9 @@ class AutochargeFunction:
             wr = csv.writer(f)
 
             now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+            log = [now_time, "marker_detect_success"]
+            wr.writerow(log)
             log = [now_time, self.sequence]
-
             wr.writerow(log)
             f.close()
 
@@ -361,12 +418,14 @@ class AutochargeFunction:
                 self.search_fail_cnt = 0
                 self._stop_turn()
                 self.sequence = "guidance"
+                initial_pos_pub()
                 f = open(file_name,'a')
                 wr = csv.writer(f)
 
                 now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                log = [now_time, "success_search"]
+                wr.writerow(log)
                 log = [now_time, self.sequence]
-
                 wr.writerow(log)
                 f.close()
             else: pass
@@ -412,8 +471,9 @@ class AutochargeFunction:
                 wr = csv.writer(f)
 
                 now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                log = [now_time, "not_center_left"]
+                wr.writerow(log)
                 log = [now_time, self.sequence]
-
                 wr.writerow(log)
                 f.close()
                 sleep(1)
@@ -427,14 +487,16 @@ class AutochargeFunction:
                 wr = csv.writer(f)
 
                 now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                log = [now_time, "not_center_right"]
+                wr.writerow(log)
                 log = [now_time, self.sequence]
-
                 wr.writerow(log)
                 f.close()
                 sleep(1)
 
             elif self.robot_position == 'CENTER':
                 self.sequence = "guidance"
+                initial_pos_pub()
                 f = open(file_name,'a')
                 wr = csv.writer(f)
 
@@ -444,7 +506,11 @@ class AutochargeFunction:
                 wr.writerow(log)
                 f.close()
 
-                self.Ros_Func.initpose_srv(init_pose["position_x"], init_pose["position_y"], init_pose["orientation_z"], init_pose["orientaion_w"])
+
+                #self.Ros_Func.initpose_srv(init_pose["position_x"], init_pose["position_y"], init_pose["orientation_z"], init_pose["orientation_w"])
+
+
+
 
     def _guidance_sequence(self):
         self.Ros_Func._autocharge_publisher(4)
@@ -466,8 +532,9 @@ class AutochargeFunction:
             wr = csv.writer(f)
 
             now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+            log = [now_time, "sona_detect"]
+            wr.writerow(log)
             log = [now_time, self.sequence]
-
             wr.writerow(log)
             f.close()
 
@@ -509,8 +576,9 @@ class AutochargeFunction:
                     wr = csv.writer(f)
 
                     now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                    log = [now_time, "guidance_cancel"]
+                    wr.writerow(log)
                     log = [now_time, self.sequence]
-
                     wr.writerow(log)
                     f.close()
 
@@ -548,8 +616,9 @@ class AutochargeFunction:
                     wr = csv.writer(f)
 
                     now_time = str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
+                    log = [now_time, "guidance_cancel"]
+                    wr.writerow(log)
                     log = [now_time, self.sequence]
-
                     wr.writerow(log)
                     f.close()
 
@@ -560,7 +629,20 @@ class AutochargeFunction:
         #if self.Ros_Func.station_state == "disconnected":
         #    self.sequence = "disconnected"
 
+        if self.finish_time_checker == False:
+            self.finish_time = datetime.datetime.now() + datetime.timedelta(minutes= 25)
+            self.finish_time_checker = True
+        else:
+            current_time = datetime.datetime.now()
+            print("current_time: ", current_time)
+            print("finish_time: ", self.finish_time)
+            if current_time.minute == self.finish_time.minute:
+                self.sequence = "finish"
+                self.finish_time_checker = False
+
+
         if self.Ros_Func.station_state == "contact":
+
             if self.Ros_Func.battery_amount > 95:
                 self.sequence = "finish"
                 f = open(file_name,'a')
@@ -574,16 +656,10 @@ class AutochargeFunction:
         else:
             pass
 
-    def _disconnected_sequence(self):
-        self.Ros_Func._autocharge_publisher(6)
-        print("disconnected!!!")
-        self.finish()
-
     def _finish_sequence(self):
-        self.Ros_Func._autocharge_publisher(7)
+        self.Ros_Func._autocharge_publisher(6)
         print("finish!!!")
-
-        sleep(3000)
+        sleep(1)
 
         if self.Ros_Func.battery_amount > 95:
             self.sequence = "finish"
@@ -595,7 +671,7 @@ class AutochargeFunction:
 
             wr.writerow(log)
             f.close()
-
+        """
         else:
             self.sequence = "charging"
             f = open(file_name,'a')
@@ -607,6 +683,11 @@ class AutochargeFunction:
             wr.writerow(log)
             f.close()
             pass
+        """
+    def _disconnected_sequence(self):
+        self.Ros_Func._autocharge_publisher(7)
+        print("disconnected!!!")
+        self.finish()
 
     def _else_sequence(self):
         self.Ros_Func._autocharge_publisher(8)
@@ -752,7 +833,6 @@ class AutochargeFunction:
         self.recog.finish()
         #sys.exit("exit")
 
-
 class chargingAction(object):
     print("chargingAction start!!!")
     char_Func = AutochargeFunction()
@@ -762,6 +842,7 @@ class chargingAction(object):
     _result = ChargingActionResult()
 
     def __init__(self, name):
+        self.clear_costmaps_srv = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
         self._action_name = name
         self._as = actionlib.SimpleActionServer(self._action_name, ChargingAction, execute_cb=self.execute_cb, auto_start = False)
         self._as.start()
@@ -797,7 +878,8 @@ class chargingAction(object):
         #     self._as.publish_feedback(self._feedback)
         #     # this step is not necessary, the sequence is computed at 1 Hz for demonstration purposes
         #     r.sleep()
-        
+        self.clear_costmaps_srv()
+
         if success:
             #os.system("mplayer ~/voice/charging_done.mp3")
             self._result.result = "end_autocharge_mode"
