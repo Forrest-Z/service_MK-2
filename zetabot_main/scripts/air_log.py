@@ -2,11 +2,29 @@
 
 import rospy
 
+import mysql.connector
+
+import json
 import csv
 import time
 import sys, os
 from zetabot_main.msg import EnvironmentMsgs
 from geometry_msgs.msg import Pose
+
+
+robot_id = ""
+
+mydb = mysql.connector.connect(
+    host="db-instance-zetabank.cyqiscqvsgd5.ap-northeast-2.rds.amazonaws.com",
+    user="admin",
+    passwd="zetabank!2",
+    database="zetabank_db" 
+)
+
+
+mc = mydb.cursor()
+
+sql = "INSERT INTO robot1_sensor (robot_id, x, y, ultrafine_dust, fine_dust, co2, formaldehyde, co, no2, radon,tvoc,temperature,humidity) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)";
 
 
 air_log = EnvironmentMsgs()
@@ -44,9 +62,34 @@ def new_file(today) :
     file_ready_flag = True
 
 def air_callback(msg) :
+    global mc
+    global sql
+    global mydb
+    global robot_id
+
     global air_log
     global today
     air_log = msg
+
+    Fine_dust = msg.Dust_PM10_ugm3
+    Ultrafine_dust =  msg.Dust_PM2_5_ugm3
+    CO2 = msg.CO2_ppm
+    Formaldehyde =  msg.HCHO_ugm3
+    CO = msg.CO_ppm
+    NO2 = msg.NO2_ppm
+    Radon = msg.Rn_Bqm3
+    Organic_compounds = msg.TVOCs_ugm3
+    Temperature = msg.temp_celcius
+    Humidity = msg.hum_RHp
+
+    val = (robot_id,pose_log.position.x,pose_log.position.y,Ultrafine_dust,Fine_dust,CO2,Formaldehyde,CO,NO2,Radon,Organic_compounds,Temperature,Humidity)
+    
+    mc.execute(sql, val)
+
+    mydb.commit()
+
+    print(mc.rowcount, "insert record")
+
 
     if today != time.strftime('%Y_%m_%d', time.localtime(time.time())) :
         today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
@@ -77,11 +120,14 @@ def pose_callback(msg) :
     pose_ready_flag = True
 
 def main():
+    global robot_id
+
     
 
     rospy.init_node("air_log")
 
     battery_log_save_flag = rospy.get_param("air_log_save_flag",True)
+    robot_id = rospy.get_param("robot_id","")
 
     batt_sub = rospy.Subscriber("/air",EnvironmentMsgs,air_callback)
     pose_sub = rospy.Subscriber("/robot_pose",Pose,pose_callback)

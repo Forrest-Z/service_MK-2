@@ -1,3 +1,5 @@
+robot_id : "robot_id"
+
 ###log_save_falg
 battery_log_save_flag : True
 air_log_save_flag : True
