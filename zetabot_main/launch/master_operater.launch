@@ -6,6 +6,8 @@
         <arg name="rs_serial_no_2" value="2"/>
     </include>
 
+    <include file="$(find ira_laser_tools)/launch/laserscan_multi_merger.launch" />
+
     <node pkg="zetabot_main" type="battery_log.py" name="battery_log" respawn="true"/>
 
     <node pkg="zetabot_main" type="air_log.py" name="air_log" respawn="true"/>
