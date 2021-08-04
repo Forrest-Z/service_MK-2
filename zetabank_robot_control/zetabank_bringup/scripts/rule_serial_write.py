@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#!/usr/bin/env python2
+#!/usr/bin/env python
 import sys, os, time, threading
 import subprocess
 

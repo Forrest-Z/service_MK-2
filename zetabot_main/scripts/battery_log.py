@@ -16,6 +16,26 @@ log_directory = "/home/zetabank/robot_log/battery_log"
 
 battery_SOC_pub = rospy.Publisher("/battery_SOC",Float32,queue_size=10)
 
+today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
+file_name = log_directory + "/batt_log_"+today+".csv"
+
+def new_file(today) :
+    global file_name
+
+    file_name = log_directory + "/batt_log_"+today+".csv"
+
+    if os.path.isfile(file_name):
+        print('ok')
+    else :
+        if not os.path.exists(log_directory):
+            os.makedirs(log_directory)
+        f = open(file_name,'w')
+        wr = csv.writer(f)
+        log_name = ['Time'] + [j + i for i in BatteryInformationMsgs.__slots__  for j in ['BAT1_','BAT2_']]
+        wr.writerow(log_name)
+        f.close()
+
+
 def battery_callback(msg) :
     global battery1
     global battery2
@@ -29,12 +49,16 @@ def battery_callback(msg) :
     battery_SOC_pub.publish(battery_SOC)
 
 def main():
+    global today
+    global file_name
 
     rospy.init_node("batt_log")
 
     battery_log_save_flag = rospy.get_param("battery_log_save_flag",True)
 
     batt_sub = rospy.Subscriber("/battery",BatteryInformationMsgs,battery_callback)
+
+
     today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
 
     yy_mm_dd = time.strftime('%Y-%m-%d', time.localtime(time.time()))
@@ -44,19 +68,7 @@ def main():
 
     rospy.sleep(1)
 
-    file_name = log_directory + "/batt_log_"+today+".csv"
-
-
-    if os.path.isfile(file_name):
-        print('ok')
-    else :
-        if not os.path.exists(log_directory):
-            os.makedirs(log_directory)
-        f = open(file_name,'w')
-        wr = csv.writer(f)
-        log_name = ['Time'] + [j + i for i in BatteryInformationMsgs.__slots__  for j in ['BAT1_','BAT2_']]
-        wr.writerow(log_name)
-        f.close()
+    new_file(today)
 
     rospy.sleep(1)
 
@@ -64,6 +76,9 @@ def main():
     
     try :
         while (rospy.is_shutdown) :
+            if today != time.strftime('%Y_%m_%d', time.localtime(time.time())) :
+                today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
+                new_file(today)
 
             if battery_log_save_flag :
                 while time.localtime(time.time()).tm_min == minit :
@@ -72,6 +87,7 @@ def main():
                 f = open(file_name,'a')
                 wr = csv.writer(f)
 
+                yy_mm_dd = time.strftime('%Y-%m-%d', time.localtime(time.time()))
                 now_time = yy_mm_dd + " " + str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)
 
                 log = [now_time]

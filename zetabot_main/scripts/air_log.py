@@ -23,15 +23,40 @@ yy_mm_dd = time.strftime('%Y-%m-%d', time.localtime(time.time()))
 log_directory = "/home/zetabank/robot_log/air_log"
 file_name = log_directory + "/air_log_"+today+".csv"
 
+def new_file(today) :
+    global file_ready_flag
+    global file_name
+
+    file_ready_flag = False
+    file_name = log_directory + "/air_log_"+today+".csv"
+
+    if os.path.isfile(file_name):
+        print('ok')
+    else :
+        if not os.path.exists(log_directory):
+            os.makedirs(log_directory)
+        f = open(file_name,'w')
+        wr = csv.writer(f)
+        log_name = ['Time'] + ['x'] + ['y'] + [i for i in EnvironmentMsgs.__slots__]
+        wr.writerow(log_name)
+        f.close()
+    
+    file_ready_flag = True
+
 def air_callback(msg) :
     global air_log
+    global today
     air_log = msg
 
+    if today != time.strftime('%Y_%m_%d', time.localtime(time.time())) :
+        today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
+        new_file(today)
 
     if file_ready_flag and pose_ready_flag :
         f = open(file_name,'a')
         wr = csv.writer(f)
 
+        yy_mm_dd = time.strftime('%Y-%m-%d', time.localtime(time.time()))
         now_time = yy_mm_dd + " " + str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min) + ":" + str(time.localtime(time.time()).tm_sec)
         log = [now_time]
         log.append(pose_log.position.x)
@@ -52,7 +77,7 @@ def pose_callback(msg) :
     pose_ready_flag = True
 
 def main():
-    global file_ready_flag
+    
 
     rospy.init_node("air_log")
 
@@ -64,23 +89,7 @@ def main():
 
     rospy.sleep(1)
 
-
-
-
-    if os.path.isfile(file_name):
-        print('ok')
-    else :
-        if not os.path.exists(log_directory):
-            os.makedirs(log_directory)
-        f = open(file_name,'w')
-        wr = csv.writer(f)
-        log_name = ['Time'] + ['x'] + ['y'] + [i for i in EnvironmentMsgs.__slots__]
-        wr.writerow(log_name)
-        f.close()
-    
-    file_ready_flag = True
-
-    rospy.sleep(1)
+    new_file(today)
 
     rospy.spin()
 

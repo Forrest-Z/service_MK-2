@@ -2,7 +2,7 @@
 
 
   <!-- Map server -->
-    <arg name="map_file" default="$(find zetabank_navigation)/maps/office2.yaml"/>
+    <arg name="map_file" default="$(find zetabank_navigation)/maps/office_0716.yaml"/>
     <!-- <arg name="map_file" default="$(find tracking_pid)/maps/grid.yaml"/> -->
 
     

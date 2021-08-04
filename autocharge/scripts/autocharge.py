@@ -5,6 +5,7 @@ import sys
 import csv
 import time
 from time import sleep
+import datetime
 import socket
 import datetime
 from threading import Thread
@@ -53,8 +54,11 @@ log_directory = "/home/zetabank/robot_log/autocharge_log"
 today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
 file_name = log_directory + "/autocharge_log_"+today+".csv"
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> e6a89413d097036f880bb29b1d9a69a60b504fa6
 def initial_pos_pub():
     global init_pose
 
@@ -879,7 +883,11 @@ class chargingAction(object):
         #     # this step is not necessary, the sequence is computed at 1 Hz for demonstration purposes
         #     r.sleep()
         self.clear_costmaps_srv()
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> e6a89413d097036f880bb29b1d9a69a60b504fa6
         if success:
             #os.system("mplayer ~/voice/charging_done.mp3")
             self._result.result = "end_autocharge_mode"
