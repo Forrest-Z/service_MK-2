@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+
+from logging import log
+from sqlite3.dbapi2 import connect
 import rospy
 import roslib
 import actionlib
@@ -8,12 +11,13 @@ import os
 import math
 import numpy
 import threading
-import time
+import time, csv
 
 import full_coverage.msg
 from std_msgs.msg import UInt8
 from std_msgs.msg import Bool
 from std_srvs.srv import Empty
+from zetabot_main.srv import InitPoseSrv
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Pose
 from sensor_msgs.msg import Range
@@ -25,6 +29,7 @@ from full_coverage.msg import lidar_filter
 from zetabot_main.srv import ModuleControllerSrv
 from zetabot_main.msg import SonarArray
 from sensor_msgs.msg import Imu
+from nav_msgs.msg import Odometry
 
 
 sonar_warning_top = 40
@@ -51,13 +56,19 @@ imu_get_list = []
 imu_get_time = None
 stm_called = True
 stm_recall_flag = False
+set_pose_flag = True
+disconnect_flag = False
+odom_pose = {}
 
-
+connect_ = 'STM_connected'
+disconnect = 'STM_disconnected'
 
 emergency_topic = "/emergency_stop"
 emergency_pub = rospy.Publisher(emergency_topic,String, queue_size=10)
 emergency_call = rospy.ServiceProxy("/emergency_stm", Empty)
+odom_pose_srv = rospy.ServiceProxy('/init_pose_srv', InitPoseSrv)
 module_controller_srv = rospy.ServiceProxy("/module_controller_srv",ModuleControllerSrv)
+log_directory = "/home/zetabank/robot_log/stm_log"
 
 rospy.init_node('sonar_filter')
 
@@ -86,16 +97,6 @@ def recv_sonar(data):
     sonar_sensor.sonar_DB2 = data.data[8]
     sonar_sensor.sonar_DL1 = data.data[2]
     sonar_sensor.sonar_DL2 = data.data[3]
-
-    # os.system('clear')
-    # for key,value in sonar_sensor.items() : 
-    #     print(key + " : " + str(value))
-    
-
-    # print("-"*30)
-    # print(data)
-    # print("-"*30)
-
 
 def recv_bumper(data):
     global bumper_flag
@@ -130,29 +131,62 @@ def recv_imu(data):
 
 def emergency_stm_call():
     emergency_call()
+     
+def odom_callback(msg):
+    global odom_pose
+    odom_pose = {}
+    odom_pose = {
+        'position_x' : msg.position.x,
+        'position_y' : msg.position.y,
+        'orientation_z' : msg.orientation.z,
+        'orientation_w' : msg.orientation.w
+    }
+
+def odom_position_srv(odom_pose_,file_name):
+    global disconnect_flag
+    global log_directory
+    odom_pose_srv(odom_pose_['position_x'],odom_pose_['position_y'],odom_pose_['orientation_z'],odom_pose_['orientation_w'])
+
+    if not os.path.exists(log_directory):
+        os.makedirs(log_directory)
+    f = open(file_name, 'a')
+    wr = csv.writer(f)
+    log_name = [str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)]
+    log_name.append(disconnect)
+    wr.writerow(log_name)
+    f.close
+    disconnect_flag = True
+
+def new_file(file_name):
+    if os.path.isfile(file_name):
+        pass
+    else:
+        if not os.path.exists(log_directory):
+            os.makedirs(log_directory)
+        f = open(file_name, 'w')
+        wr = csv.writer(f)
+        log_name = ['time']
+        log_name.append('status')
+        wr.writerow(log_name)
+        f.close
 
 def emergency_send () :
     global bumper_flag
     global estop_flag
     global stm_called
     global stm_recall_flag
-    
+    global set_pose_flag
+    global odom_pose
+    global log_directory
+    global disconnect_flag
+
+    today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
+    yy_mm_dd = time.strftime('%Y-%m-%d', time.localtime(time.time()))
+
     while True:
         rospy.sleep(0.01)
         emergency_msg = ""
-        os.system("clear")
-        # print("sonar_UF :",sonar_sensor.sonar_UF)
-        # print("sonar_UR :",sonar_sensor.sonar_UR)
-        # print("sonar_UB :",sonar_sensor.sonar_UB)
-        # print("sonar_UL :",sonar_sensor.sonar_UL)
-        # print("sonar_DF :",sonar_sensor.sonar_DF)
-        # print("sonar_DR1 :",sonar_sensor.sonar_DR1)
-        # print("sonar_DR2 :",sonar_sensor.sonar_DR2)
-        # print("sonar_DB1 :",sonar_sensor.sonar_DB1)
-        # print("sonar_DB2 :",sonar_sensor.sonar_DB2)
-        # print("sonar_DL1 :",sonar_sensor.sonar_DL1)
-        # print("sonar_DL2 :",sonar_sensor.sonar_DL2)
-
+        # os.system("clear")
         print("estop_flag : ",estop_flag)
 
         if bumper_flag == True : 
@@ -172,33 +206,41 @@ def emergency_send () :
         if imu_avr_term == None :
             emergency_msg += "/imu_error_stop"
 
-
         elif rospy.get_time() - imu_get_time >= (imu_avr_term*10) :
-            # os.system("rosnode kill /stm_starter")
             emergency_msg += "/imu_error_stop"
+
             stm_called = False
 
         if not stm_called and not stm_recall_flag:
             stm_recall_flag = True
             print("recall")
-            #stm call thread
-            
-            #set_param odom_sub.msg
+            set_pose_flag = False
 
             t1 = threading.Thread(target=emergency_stm_call)
             t1.daemon = True 
             t1.start()
-
             print("return")
-        # if (sonar_sensor.sonar_UF <= sonar_stop_top or sonar_sensor.sonar_DF <= sonar_stop_bottom  ) :
-        #     emergency_msg += "/sonar_stop"
-        #     print("sonar_sensor_val :",sonar_sensor.sonar_UF)
-        #     print("sonar_stop")
 
-        # elif (sonar_sensor.sonar_UF <= sonar_warning_top or sonar_sensor.sonar_DF <= sonar_warning_bottom  ) :
-        #     emergency_msg += "/sonar_warning"
-        #     print("sonar_sensor_val :",sonar_sensor.sonar_UF)
-        #     print("sonar_warning")
+        if not set_pose_flag and stm_called:
+            file_name = log_directory + "/stm_log_" + today + ".csv"
+        #     print("main: ",odom_pose)
+            if today != time.strftime('%Y_%m_%d', time.localtime(time.time())) :
+                today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
+                
+                new_file(file_name)
+                
+            odom_position_srv(odom_pose, file_name)
+
+            if disconnect_flag:
+                if not os.path.exists(log_directory):
+                    os.makedirs(log_directory)
+                f = open(file_name, 'a')
+                wr = csv.writer(f)
+                log_name = [str(time.localtime(time.time()).tm_hour) + ":" + str(time.localtime(time.time()).tm_min)]
+                log_name.append(connect_)
+                wr.writerow(log_name)
+                f.close
+                set_pose_flag = True
 
         emergency_pub.publish(emergency_msg)
 
@@ -207,9 +249,6 @@ def main():
     t1 = threading.Thread(target=emergency_send)
     t1.daemon = True 
     t1.start()
-
-    # sonar_topic = "/sonar"
-    # rospy.Subscriber(sonar_topic,SonarArray,recv_sonar)
 
     bumper_topic = "/bumper"
     rospy.Subscriber(bumper_topic,Bool,recv_bumper)
@@ -222,6 +261,9 @@ def main():
 
     imu_topic = "/imu"
     rospy.Subscriber(imu_topic,Imu,recv_imu)
+
+    pose_topic = "/robot_pose"
+    rospy.Subscriber(pose_topic, Pose, odom_callback)
     
     rospy.spin()
 
