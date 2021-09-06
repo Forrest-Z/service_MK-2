@@ -9,10 +9,13 @@ import csv
 import time
 import sys, os
 from zetabot_main.msg import EnvironmentMsgs
+from std_msgs.msg import Float32
 from geometry_msgs.msg import Pose
 
 
 robot_id = ""
+
+battery_SOC = None
 
 mydb = mysql.connector.connect(
     host="db-instance-zetabank.cyqiscqvsgd5.ap-northeast-2.rds.amazonaws.com",
@@ -24,7 +27,7 @@ mydb = mysql.connector.connect(
 
 mc = mydb.cursor()
 
-sql = "INSERT INTO robot1_sensor (robot_id, x, y, ultrafine_dust, fine_dust, co2, formaldehyde, co, no2, radon,tvoc,temperature,humidity) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)";
+sql = "INSERT INTO robot1_sensor (robot_id, x, y, ultrafine_dust, fine_dust, co2, formaldehyde, co, no2, radon,tvoc,temperature,humidity,battery) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
 
 
 air_log = EnvironmentMsgs()
@@ -69,6 +72,8 @@ def air_callback(msg) :
 
     global air_log
     global today
+
+    global battery_SOC
     air_log = msg
 
     Fine_dust = msg.Dust_PM10_ugm3
@@ -81,8 +86,9 @@ def air_callback(msg) :
     Organic_compounds = msg.TVOCs_ugm3
     Temperature = msg.temp_celcius
     Humidity = msg.hum_RHp
+    battery = battery_SOC
 
-    val = (robot_id,pose_log.position.x,pose_log.position.y,Ultrafine_dust,Fine_dust,CO2,Formaldehyde,CO,NO2,Radon,Organic_compounds,Temperature,Humidity)
+    val = (robot_id,pose_log.position.x,pose_log.position.y,Ultrafine_dust,Fine_dust,CO2,Formaldehyde,CO,NO2,Radon,Organic_compounds,Temperature,Humidity,battery)
     
     mc.execute(sql, val)
 
@@ -119,6 +125,11 @@ def pose_callback(msg) :
 
     pose_ready_flag = True
 
+def battery_callback(msg) :
+    global battery_SOC
+
+    battery_SOC = msg.data
+
 def main():
     global robot_id
 
@@ -126,10 +137,12 @@ def main():
 
     rospy.init_node("air_log")
 
-    battery_log_save_flag = rospy.get_param("air_log_save_flag",True)
+    batt_sub = rospy.Subscriber("/battery_SOC",Float32,battery_callback)
+
+    air_log_save_flag = rospy.get_param("air_log_save_flag",True)
     robot_id = rospy.get_param("robot_id","")
 
-    batt_sub = rospy.Subscriber("/air",EnvironmentMsgs,air_callback)
+    air_sub = rospy.Subscriber("/air",EnvironmentMsgs,air_callback)
     pose_sub = rospy.Subscriber("/robot_pose",Pose,pose_callback)
 
 
