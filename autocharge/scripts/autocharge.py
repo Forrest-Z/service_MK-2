@@ -7,6 +7,7 @@ import time
 from time import sleep
 import datetime
 import socket
+import datetime
 from threading import Thread
 import json
 import cv2
@@ -53,6 +54,11 @@ log_directory = "/home/zetabank/robot_log/autocharge_log"
 today = time.strftime('%Y_%m_%d', time.localtime(time.time()))
 file_name = log_directory + "/autocharge_log_"+today+".csv"
 
+<<<<<<< HEAD
+
+
+=======
+>>>>>>> e6a89413d097036f880bb29b1d9a69a60b504fa6
 def initial_pos_pub():
     global init_pose
 
@@ -131,6 +137,7 @@ class RosFunction:
         #angle_subscriber = rospy.Subscriber('/angle', Int16, self._angle_subscriber_callback)
 
         # srv
+        self.clear_costmaps_srv = rospy.ServiceProxy('/move_base/clear_costmaps',Empty)
         self.turn_srv = rospy.ServiceProxy('/turn', TurnSrv)
         self.initpose_srv = rospy.ServiceProxy("/init_pose_srv",InitPoseSrv)
 
@@ -252,6 +259,8 @@ class RosFunction:
         goal.target_pose.pose.position.y = y
         goal.target_pose.pose.orientation.w = 1
 
+        self.clear_costmaps_srv()
+
         self.goal_status = None
         print("wait_before: ", self.goal_status)
         
@@ -273,7 +282,6 @@ class RosFunction:
             rospy.signal_shutdown("Action server not available!")
         else:
             return client.get_result()
-
 
 class AutochargeFunction:
     Ros_Func = RosFunction()
@@ -829,7 +837,6 @@ class AutochargeFunction:
         self.recog.finish()
         #sys.exit("exit")
 
-
 class chargingAction(object):
     print("chargingAction start!!!")
     char_Func = AutochargeFunction()
@@ -876,7 +883,11 @@ class chargingAction(object):
         #     # this step is not necessary, the sequence is computed at 1 Hz for demonstration purposes
         #     r.sleep()
         self.clear_costmaps_srv()
+<<<<<<< HEAD
+
+=======
         
+>>>>>>> e6a89413d097036f880bb29b1d9a69a60b504fa6
         if success:
             #os.system("mplayer ~/voice/charging_done.mp3")
             self._result.result = "end_autocharge_mode"

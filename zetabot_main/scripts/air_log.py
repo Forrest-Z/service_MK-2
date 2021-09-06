@@ -90,9 +90,12 @@ def air_callback(msg) :
 
     val = (robot_id,pose_log.position.x,pose_log.position.y,Ultrafine_dust,Fine_dust,CO2,Formaldehyde,CO,NO2,Radon,Organic_compounds,Temperature,Humidity,battery)
     
-    mc.execute(sql, val)
+    try : 
+        mc.execute(sql, val)
 
-    mydb.commit()
+        mydb.commit()
+    except:
+        print("db error")
 
     print(mc.rowcount, "insert record")
 
