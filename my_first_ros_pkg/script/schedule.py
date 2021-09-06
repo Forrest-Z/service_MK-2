@@ -2,8 +2,14 @@
 import rospy
 
 import os,thread, threading
-import subprocess, shlex
 import actionlib
+
+import sys
+
+sys.path.append("/home/zetabank/catkin_ws/devel/lib/python2.7/dist-packages")
+sys.path.append("/opt/ros/melodic/lib/python2.7/dist-packages")
+sys.path.append("/home/zetabank/.local/lib/python2.7/site-packages")
+
 from apscheduler.jobstores.base import JobLookupError
 from apscheduler.schedulers.background import BackgroundScheduler
 import time
@@ -20,9 +26,8 @@ from std_srvs.srv import Empty
 import my_first_ros_pkg.msg
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from std_msgs.msg import UInt8
-import sys, select, termios, tty
+import select, termios, tty
 import random
-
 
 cur_mode = 'rest'
 air_result = ''
@@ -44,6 +49,8 @@ power_ctl_pub =  rospy.Publisher('power_ctl', String, queue_size=10)
 
 
 module_controller_srv = rospy.ServiceProxy("/module_controller_srv", ModuleControllerSrv)
+move_base_result_status = None
+
 
 def os_system(path):
     os.system(path)
@@ -101,8 +108,6 @@ def initial_pos_pub():
     rospy.sleep(1)
     publisher.publish(start_pos)
     rospy.sleep(1)
-
-
 
 def cancel_mod_pub(mode):
     global air_result
@@ -185,7 +190,7 @@ def charging_client():
     goal = ChargingGoal()
 
     # Sends the goal to the action server.
-    robot_mode_pub.publish("charging")
+    robot_mode_pub.publish("low_battery")
     client.send_goal(goal)
 
     # Waits for the server to finish performing the action.
@@ -212,11 +217,8 @@ def charging_client():
     cur_mode = 'rest'
 
     print("Result:" + charging_result)
-    if charging_result == 'charging_cancel':
-        print("charging_cancel result" + charging_result)
-    cur_mode = 'rest'
+    cur_mode ="rest"
     #srv(-1.0974,-0.855,-0.1844,0.982)
-
 
     return  charging_result # A chargingResult
 
@@ -313,6 +315,11 @@ def movebase_client(x,y,z=1):
     else:
         return client.get_result()
 
+def recv_move_base_result(msg) :
+    global move_base_result_status
+
+    move_base_result_status = msg.status.status
+
 class Scheduler(object):
     def __init__(self):
         self.sched = BackgroundScheduler()
@@ -356,13 +363,17 @@ class Scheduler(object):
 
     def battery_charge(self,type, job_id):
         global cur_mode
-        cur_mode = "charging"
+
         print("charging_mode_on")
-        result = charging_client()
+        if cur_mode == "charging" :
+            None
+        else:
+            module_controller_srv("uvc_off,air_off")
+            result = charging_client()
+
         print("Result:" + result.result)
         if result.result == 'charging_cancel':
             print("charging_cancel result" + result.result)
-        cur_mode = 'rest'
 
     def charging_cancel(self,type, job_id):
         global  cur_mode
@@ -399,8 +410,7 @@ class Scheduler(object):
         else :
             self.charging_cancel_min = min_now + charging_cancel_term
             self.charging_cancel_hour = hour_now
-
-        
+  
     def roming_move(self,type, job_id) :
         global cur_mode
         if cur_mode == 'rest' or cur_mode == 'air_condition':
@@ -530,9 +540,10 @@ if __name__ == '__main__':
         if key == 'a' :
             scheduler.roming_move("tt","tt")
         elif key == 's' :
-            t1 = threading.Thread(target=charging_client)
-            t1.daemon = True 
-            t1.start()
+            if cur_mode != "charging":
+                t1 = threading.Thread(target=charging_client)
+                t1.daemon = True 
+                t1.start()
         elif key == 'd' :
             global  cur_mode
             print ("dddddddddddddd")
@@ -541,8 +552,7 @@ if __name__ == '__main__':
                 #rospy.sleep(20)
                 #initial_pos_pub()
                 cancel_mod_pub('charging')
-                cur_mode = 'rest'
                 print('charging cancel')
             else:
                 print('Not charging')     
-            
+                        
