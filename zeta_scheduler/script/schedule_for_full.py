@@ -5,6 +5,13 @@ import os
 import json
 
 import actionlib
+
+import sys
+
+sys.path.append("/home/zetabank/catkin_ws/devel/lib/python2.7/dist-packages")
+sys.path.append("/opt/ros/melodic/lib/python2.7/dist-packages")
+sys.path.append("/home/zetabank/.local/lib/python2.7/site-packages")
+
 from apscheduler.jobstores.base import JobLookupError
 from apscheduler.schedulers.background import BackgroundScheduler
 import time
@@ -21,6 +28,9 @@ from zetabot_main.srv import ModuleControllerSrv, TurnQuaternionSrv
 from std_srvs.srv import Empty
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from geometry_msgs.msg import Twist, Quaternion
+import threading
+
+#import select, termios, tty
 
 full_path = []
 

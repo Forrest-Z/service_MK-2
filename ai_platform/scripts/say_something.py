@@ -76,7 +76,7 @@ class SaySomething(object) :
 
         self.depth_sub = RosMaker("sub","/darknet_depth",BoundingBoxesCenter,self.depthSubCallback)
         self.initMixer()
-	self.say_pub = RosMaker("pub","/speak",Bool)
+        self.say_pub = RosMaker("pub","/speak",Bool)
 
         self.say_hello = None
 
@@ -115,15 +115,15 @@ class SaySomething(object) :
                     # time.sleep(1)
                     
                     if self.switch_flag == 0 :
-			self.speak_pub(True)
+                        self.speak_pub(True)
                         os.system("mplayer "+ self.sound_1)
                         self.switch_flag = 1
-			self.speak_pub(False)
+                        self.speak_pub(False)
                     elif self.switch_flag == 1 :
-			self.speak_pub(True)
+                        self.speak_pub(True)
                         os.system("mplayer "+ self.sound_2)
                         self.switch_flag = 0
-			self.speak_pub(False)
+                        self.speak_pub(False)
 
                     self.hello_done = True
                     print("hello_done")
